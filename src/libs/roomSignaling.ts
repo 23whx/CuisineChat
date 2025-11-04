@@ -64,6 +64,17 @@ export class RoomSignalingManager {
         this.hubPeer.on('open', (id) => {
           console.log('Successfully became room hub:', id);
           this.isHub = true;
+          
+          // Hub 自己也要加入房间列表（使用 clientPeer 的 ID）
+          if (this.clientPeer.id) {
+            this.roomPeers.set(this.clientPeer.id, {
+              userId: this.userId,
+              username: this.username,
+              avatarSeed: this.avatarSeed,
+            });
+            console.log('Hub: Added self to room peers:', this.clientPeer.id);
+          }
+          
           this.setupHubListeners();
           resolve();
         });
@@ -98,20 +109,27 @@ export class RoomSignalingManager {
       conn.on('open', () => {
         this.hubConnections.set(conn.peer, conn);
 
-        // 发送当前房间内的所有 peers
+        // 先将新用户添加到房间列表（使用默认信息，后续 join 消息会更新）
+        this.roomPeers.set(conn.peer, {
+          userId: conn.peer,
+          username: 'Unknown',
+          avatarSeed: conn.peer,
+        });
+
+        // 发送当前房间内的所有 peers（不包括新加入的这个）
         const peers = Array.from(this.roomPeers.keys()).filter(p => p !== conn.peer);
         conn.send({
           type: 'peer_list',
           peers,
         } as RoomHubMessage);
 
+        console.log('Hub: Sent peer list to', conn.peer, ':', peers);
+
         // 通知其他人有新 peer 加入
         this.broadcastFromHub({
           type: 'peer_joined',
           peerId: conn.peer,
         }, conn.peer);
-
-        console.log('Hub: Sent peer list to', conn.peer, ':', peers);
       });
 
       conn.on('data', (data: any) => {
