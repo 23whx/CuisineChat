@@ -1,0 +1,78 @@
+{
+  "app": {
+    "title": "CuisineChat",
+    "subtitle": "Temporary Chat Room"
+  },
+  "home": {
+    "welcome": "Welcome to CuisineChat",
+    "description": "A temporary, secure online chat room",
+    "roomId": "Room ID",
+    "roomIdPlaceholder": "Enter or create room ID",
+    "password": "Room Password",
+    "passwordPlaceholder": "3-digit password",
+    "join": "Join Room",
+    "create": "Create Room",
+    "invalidPassword": "Password must be 3 digits",
+    "invalidRoomId": "Please enter room ID",
+    "tips": "Tips",
+    "tip1": "You will get a random cuisine name as your temporary username",
+    "tip2": "Chat history is not saved and will disappear after page refresh",
+    "tip3": "Make sure to use the same room ID and password with your friends"
+  },
+  "room": {
+    "online": "Online",
+    "people": "people",
+    "you": "You",
+    "typing": "Type a message...",
+    "send": "Send",
+    "sendFile": "Send File",
+    "sendImage": "Send Image",
+    "sendAudio": "Send Audio",
+    "leave": "Leave Room",
+    "copyLink": "Copy Invite Link",
+    "linkCopied": "Link Copied",
+    "settings": "Settings",
+    "emptyRoomTimeout": "No one has joined the room for {{minutes}} minutes. Would you like to leave?",
+    "roomEmpty": "You are currently alone in the room",
+    "waitingForOthers": "Waiting for others to join..."
+  },
+  "audio": {
+    "recording": "Recording...",
+    "paused": "Paused",
+    "stop": "Stop",
+    "pause": "Pause",
+    "resume": "Resume",
+    "cancel": "Cancel",
+    "send": "Send"
+  },
+  "message": {
+    "joined": "joined the chat",
+    "left": "left the chat",
+    "system": "System Message",
+    "download": "Download",
+    "image": "Image",
+    "file": "File"
+  },
+  "settings": {
+    "title": "Settings",
+    "username": "Username",
+    "usernamePlaceholder": "Enter new username",
+    "changeUsername": "Change Username",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "language": "Language",
+    "chinese": "中文",
+    "english": "English",
+    "japanese": "日本語",
+    "korean": "한국어",
+    "close": "Close"
+  },
+  "error": {
+    "connectionFailed": "Connection Failed",
+    "peerError": "Peer Connection Error",
+    "fileTooLarge": "File Too Large",
+    "uploadFailed": "Upload Failed"
+  }
+}
+

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- 碗的底部 -->
+  <ellipse cx="50" cy="75" rx="35" ry="8" fill="#D32F2F"/>
+  
+  <!-- 碗的主体 -->
+  <path d="M 15 75 Q 15 55 20 45 L 80 45 Q 85 55 85 75" fill="#F44336"/>
+  
+  <!-- 碗的高光 -->
+  <path d="M 20 45 Q 22 50 25 52 L 75 52 Q 78 50 80 45" fill="#EF5350" opacity="0.6"/>
+  
+  <!-- 面条 -->
+  <g>
+    <!-- 面条线条 -->
+    <path d="M 30 40 Q 35 30 40 35 Q 45 40 50 32 Q 55 24 60 30 Q 65 36 70 32" 
+          stroke="#FDD835" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M 32 45 Q 37 35 42 40 Q 47 45 52 37 Q 57 29 62 35 Q 67 41 72 37" 
+          stroke="#FDD835" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M 28 50 Q 33 42 38 47 Q 43 52 48 44 Q 53 36 58 42 Q 63 48 68 44" 
+          stroke="#FDD835" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </g>
+  
+  <!-- 筷子 -->
+  <g transform="rotate(-25 70 30)">
+    <rect x="65" y="15" width="2.5" height="35" fill="#8D6E63" rx="1"/>
+    <rect x="70" y="15" width="2.5" height="35" fill="#8D6E63" rx="1"/>
+  </g>
+  
+  <!-- 碗的边缘高光 -->
+  <ellipse cx="50" cy="45" rx="30" ry="3" fill="#FFCDD2" opacity="0.5"/>
+  
+  <!-- 热气 -->
+  <g opacity="0.6">
+    <path d="M 35 25 Q 35 15 35 20" stroke="#90A4AE" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M 50 20 Q 50 10 50 15" stroke="#90A4AE" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M 65 25 Q 65 15 65 20" stroke="#90A4AE" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>
+
+

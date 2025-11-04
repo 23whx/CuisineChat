@@ -1,0 +1,78 @@
+{
+  "app": {
+    "title": "CuisineChat",
+    "subtitle": "临时聊天室"
+  },
+  "home": {
+    "welcome": "欢迎来到 CuisineChat",
+    "description": "一个临时的、安全的在线聊天室",
+    "roomId": "房间 ID",
+    "roomIdPlaceholder": "输入或创建房间 ID",
+    "password": "房间密码",
+    "passwordPlaceholder": "3 位数字密码",
+    "join": "加入房间",
+    "create": "创建房间",
+    "invalidPassword": "密码必须是 3 位数字",
+    "invalidRoomId": "请输入房间 ID",
+    "tips": "提示",
+    "tip1": "你将获得一个随机的美食名称作为临时用户名",
+    "tip2": "聊天记录不会保存，刷新页面后会消失",
+    "tip3": "确保与朋友使用相同的房间 ID 和密码"
+  },
+  "room": {
+    "online": "在线",
+    "people": "人",
+    "you": "你",
+    "typing": "输入消息...",
+    "send": "发送",
+    "sendFile": "发送文件",
+    "sendImage": "发送图片",
+    "sendAudio": "发送语音",
+    "leave": "离开房间",
+    "copyLink": "复制邀请链接",
+    "linkCopied": "链接已复制",
+    "settings": "设置",
+    "emptyRoomTimeout": "房间已经 {{minutes}} 分钟没有其他人加入了。是否离开房间？",
+    "roomEmpty": "房间内暂时只有你一人",
+    "waitingForOthers": "等待其他人加入..."
+  },
+  "audio": {
+    "recording": "正在录音...",
+    "paused": "已暂停",
+    "stop": "停止",
+    "pause": "暂停",
+    "resume": "继续",
+    "cancel": "取消",
+    "send": "发送"
+  },
+  "message": {
+    "joined": "加入了聊天室",
+    "left": "离开了聊天室",
+    "system": "系统消息",
+    "download": "下载",
+    "image": "图片",
+    "file": "文件"
+  },
+  "settings": {
+    "title": "设置",
+    "username": "用户名",
+    "usernamePlaceholder": "输入新用户名",
+    "changeUsername": "更改用户名",
+    "theme": "主题",
+    "light": "浅色",
+    "dark": "深色",
+    "language": "语言",
+    "chinese": "中文",
+    "english": "English",
+    "japanese": "日本語",
+    "korean": "한국어",
+    "close": "关闭"
+  },
+  "error": {
+    "connectionFailed": "连接失败",
+    "peerError": "对等连接错误",
+    "fileTooLarge": "文件太大",
+    "uploadFailed": "上传失败"
+  }
+}
+

@@ -1,0 +1,78 @@
+{
+  "app": {
+    "title": "CuisineChat",
+    "subtitle": "一時的なチャットルーム"
+  },
+  "home": {
+    "welcome": "CuisineChatへようこそ",
+    "description": "一時的で安全なオンラインチャットルーム",
+    "roomId": "ルームID",
+    "roomIdPlaceholder": "ルームIDを入力または作成",
+    "password": "ルームパスワード",
+    "passwordPlaceholder": "3桁のパスワード",
+    "join": "ルームに参加",
+    "create": "ルームを作成",
+    "invalidPassword": "パスワードは3桁の数字である必要があります",
+    "invalidRoomId": "ルームIDを入力してください",
+    "tips": "ヒント",
+    "tip1": "ランダムな料理名が一時的なユーザー名として割り当てられます",
+    "tip2": "チャット履歴は保存されず、ページを更新すると消えます",
+    "tip3": "友達と同じルームIDとパスワードを使用してください"
+  },
+  "room": {
+    "online": "オンライン",
+    "people": "人",
+    "you": "あなた",
+    "typing": "メッセージを入力...",
+    "send": "送信",
+    "sendFile": "ファイルを送信",
+    "sendImage": "画像を送信",
+    "sendAudio": "音声を送信",
+    "leave": "退出",
+    "copyLink": "招待リンクをコピー",
+    "linkCopied": "リンクがコピーされました",
+    "settings": "設定",
+    "emptyRoomTimeout": "{{minutes}}分間、他の人が参加していません。退出しますか？",
+    "roomEmpty": "現在、ルームにはあなた一人です",
+    "waitingForOthers": "他の人の参加を待っています..."
+  },
+  "audio": {
+    "recording": "録音中...",
+    "paused": "一時停止",
+    "stop": "停止",
+    "pause": "一時停止",
+    "resume": "再開",
+    "cancel": "キャンセル",
+    "send": "送信"
+  },
+  "message": {
+    "joined": "が参加しました",
+    "left": "が退出しました",
+    "system": "システムメッセージ",
+    "download": "ダウンロード",
+    "image": "画像",
+    "file": "ファイル"
+  },
+  "settings": {
+    "title": "設定",
+    "username": "ユーザー名",
+    "usernamePlaceholder": "新しいユーザー名を入力",
+    "changeUsername": "ユーザー名を変更",
+    "theme": "テーマ",
+    "light": "ライト",
+    "dark": "ダーク",
+    "language": "言語",
+    "chinese": "中文",
+    "english": "English",
+    "japanese": "日本語",
+    "korean": "한국어",
+    "close": "閉じる"
+  },
+  "error": {
+    "connectionFailed": "接続に失敗しました",
+    "peerError": "ピア接続エラー",
+    "fileTooLarge": "ファイルが大きすぎます",
+    "uploadFailed": "アップロードに失敗しました"
+  }
+}
+

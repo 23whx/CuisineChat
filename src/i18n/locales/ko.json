@@ -1,0 +1,78 @@
+{
+  "app": {
+    "title": "CuisineChat",
+    "subtitle": "임시 채팅방"
+  },
+  "home": {
+    "welcome": "CuisineChat에 오신 것을 환영합니다",
+    "description": "임시적이고 안전한 온라인 채팅방",
+    "roomId": "방 ID",
+    "roomIdPlaceholder": "방 ID 입력 또는 생성",
+    "password": "방 비밀번호",
+    "passwordPlaceholder": "3자리 비밀번호",
+    "join": "방 참가",
+    "create": "방 만들기",
+    "invalidPassword": "비밀번호는 3자리 숫자여야 합니다",
+    "invalidRoomId": "방 ID를 입력하세요",
+    "tips": "팁",
+    "tip1": "임시 사용자 이름으로 랜덤 요리 이름이 할당됩니다",
+    "tip2": "채팅 기록은 저장되지 않으며 페이지를 새로고침하면 사라집니다",
+    "tip3": "친구와 동일한 방 ID와 비밀번호를 사용하세요"
+  },
+  "room": {
+    "online": "온라인",
+    "people": "명",
+    "you": "당신",
+    "typing": "메시지 입력...",
+    "send": "보내기",
+    "sendFile": "파일 보내기",
+    "sendImage": "이미지 보내기",
+    "sendAudio": "음성 보내기",
+    "leave": "나가기",
+    "copyLink": "초대 링크 복사",
+    "linkCopied": "링크가 복사되었습니다",
+    "settings": "설정",
+    "emptyRoomTimeout": "{{minutes}}분 동안 다른 사람이 참가하지 않았습니다. 나가시겠습니까?",
+    "roomEmpty": "현재 방에는 당신만 있습니다",
+    "waitingForOthers": "다른 사람의 참가를 기다리고 있습니다..."
+  },
+  "audio": {
+    "recording": "녹음 중...",
+    "paused": "일시 중지됨",
+    "stop": "중지",
+    "pause": "일시 중지",
+    "resume": "계속",
+    "cancel": "취소",
+    "send": "보내기"
+  },
+  "message": {
+    "joined": "님이 참가했습니다",
+    "left": "님이 나갔습니다",
+    "system": "시스템 메시지",
+    "download": "다운로드",
+    "image": "이미지",
+    "file": "파일"
+  },
+  "settings": {
+    "title": "설정",
+    "username": "사용자 이름",
+    "usernamePlaceholder": "새 사용자 이름 입력",
+    "changeUsername": "사용자 이름 변경",
+    "theme": "테마",
+    "light": "라이트",
+    "dark": "다크",
+    "language": "언어",
+    "chinese": "中文",
+    "english": "English",
+    "japanese": "日本語",
+    "korean": "한국어",
+    "close": "닫기"
+  },
+  "error": {
+    "connectionFailed": "연결 실패",
+    "peerError": "피어 연결 오류",
+    "fileTooLarge": "파일이 너무 큽니다",
+    "uploadFailed": "업로드 실패"
+  }
+}
+
