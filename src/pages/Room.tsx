@@ -17,14 +17,16 @@ export const Room: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   
-  const { currentUser, messages, peers, reset } = useChatStore();
+  const { currentUser, messages, peers, reset, roomPassword } = useChatStore();
   const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { sendMessage } = usePeerConnection(
     roomId || '',
+    roomPassword || '',
     currentUser?.id || '',
-    currentUser?.username || ''
+    currentUser?.username || '',
+    currentUser?.avatarSeed || ''
   );
 
   // 房间超时管理（10分钟无人自动提示）

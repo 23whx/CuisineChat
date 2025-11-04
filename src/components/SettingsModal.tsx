@@ -4,6 +4,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useChatStore } from '@/store/chatStore';
 import { Avatar } from './Avatar';
 import { isValidUsername } from '@/utils/username';
+import { getAvatarDataUrl } from '@/utils/avatar';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -20,7 +21,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   const handleUsernameChange = () => {
     if (newUsername && isValidUsername(newUsername) && currentUser) {
-      setCurrentUser({ ...currentUser, username: newUsername });
+      const newAvatarSeed = newUsername;
+      const newAvatar = getAvatarDataUrl(newAvatarSeed);
+      setCurrentUser({ 
+        ...currentUser, 
+        username: newUsername,
+        avatarSeed: newAvatarSeed,
+        avatar: newAvatar
+      });
       setNewUsername('');
     }
   };

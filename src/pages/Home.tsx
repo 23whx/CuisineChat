@@ -58,12 +58,14 @@ export const Home: React.FC = () => {
     // 生成临时用户信息
     const userId = generateUserId();
     const username = getRandomCuisineName();
-    const avatar = getAvatarDataUrl(username);
+    const avatarSeed = username; // 使用用户名作为头像种子
+    const avatar = getAvatarDataUrl(avatarSeed);
 
     setCurrentUser({
       id: userId,
       username,
       avatar,
+      avatarSeed,
       joinedAt: Date.now(),
     });
 

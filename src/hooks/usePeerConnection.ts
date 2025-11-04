@@ -1,17 +1,25 @@
 import { useEffect, useRef, useCallback } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { createPeer } from '@/libs/peerConfig';
+import { RoomSignalingManager } from '@/libs/roomSignaling';
 import { useChatStore } from '@/store/chatStore';
 import { DataChannelMessage, DataChannelMessageType, Message, MessageType } from '@/types';
 
 /**
  * WebRTC Peer 连接管理 Hook
  */
-export const usePeerConnection = (roomId: string, userId: string, username: string) => {
+export const usePeerConnection = (roomId: string, password: string, userId: string, username: string, avatarSeed: string) => {
   const peerRef = useRef<Peer | null>(null);
   const connectionsRef = useRef<Map<string, DataConnection>>(new Map());
+  const signalingRef = useRef<RoomSignalingManager | null>(null);
+  const userInfoRef = useRef({ userId, username, avatarSeed });
   
-  const { addMessage, addPeer, removePeer, updateConnectionStatus } = useChatStore();
+  // 更新 user info ref
+  useEffect(() => {
+    userInfoRef.current = { userId, username, avatarSeed };
+  }, [userId, username, avatarSeed]);
+  
+  const { addMessage, addPeer, removePeer, updateConnectionStatus, currentUser } = useChatStore();
 
   // 发送数据到所有连接的 peer
   const broadcast = useCallback((message: DataChannelMessage) => {
@@ -70,9 +78,10 @@ export const usePeerConnection = (roomId: string, userId: string, username: stri
       updateConnectionStatus(peerId, 'connected');
       
       // 发送自己的用户信息
+      const { userId: uid, username: uname, avatarSeed: seed } = userInfoRef.current;
       conn.send({
         type: DataChannelMessageType.USER_INFO,
-        payload: { id: userId, username },
+        payload: { id: uid, username: uname, avatarSeed: seed },
       });
     });
 
@@ -90,7 +99,7 @@ export const usePeerConnection = (roomId: string, userId: string, username: stri
       console.error('Connection error with:', peerId, error);
       updateConnectionStatus(peerId, 'failed');
     });
-  }, [userId, username, handleData, removePeer, updateConnectionStatus]);
+  }, [handleData, removePeer, updateConnectionStatus]);
 
   // 连接到其他 peer
   const connectToPeer = useCallback((targetPeerId: string) => {
@@ -123,37 +132,77 @@ export const usePeerConnection = (roomId: string, userId: string, username: stri
     addMessage(message);
   }, [broadcast, addMessage]);
 
-  // 初始化 Peer
+  // 初始化 Peer 和房间信令
   useEffect(() => {
-    const peerId = `${roomId}_${userId}`;
-    const peer = createPeer(peerId);
-    peerRef.current = peer;
+    let mounted = true;
+    
+    const initPeerAndSignaling = async () => {
+      // 创建一个随机的 peer ID（不再基于房间 ID）
+      const peer = createPeer();
+      peerRef.current = peer;
 
-    peer.on('open', (id) => {
-      console.log('My peer ID is:', id);
-    });
+      peer.on('open', async (id) => {
+        console.log('My peer ID is:', id);
+        
+        if (!mounted) return;
 
-    peer.on('connection', (conn) => {
-      console.log('Incoming connection from:', conn.peer);
-      setupConnection(conn);
-    });
+        const { userId: uid, username: uname, avatarSeed: seed } = userInfoRef.current;
+        
+        // 初始化房间信令
+        const signaling = new RoomSignalingManager(
+          roomId,
+          password,
+          uid,
+          uname,
+          seed,
+          (discoveredPeerId: string) => {
+            console.log('Discovered peer through signaling:', discoveredPeerId);
+            connectToPeer(discoveredPeerId);
+          }
+        );
+        
+        signalingRef.current = signaling;
+        
+        try {
+          await signaling.start();
+          console.log('Room signaling started successfully');
+        } catch (error) {
+          console.error('Failed to start room signaling:', error);
+        }
+      });
 
-    peer.on('error', (error) => {
-      console.error('Peer error:', error);
-    });
+      peer.on('connection', (conn) => {
+        console.log('Incoming connection from:', conn.peer);
+        setupConnection(conn);
+      });
+
+      peer.on('error', (error) => {
+        console.error('Peer error:', error);
+      });
+    };
+
+    initPeerAndSignaling();
 
     // 清理函数
     return () => {
+      mounted = false;
+      
+      if (signalingRef.current) {
+        signalingRef.current.stop();
+        signalingRef.current = null;
+      }
+      
       connectionsRef.current.forEach((conn) => {
         conn.close();
       });
       connectionsRef.current.clear();
       
-      if (peer) {
-        peer.destroy();
+      if (peerRef.current) {
+        peerRef.current.destroy();
+        peerRef.current = null;
       }
     };
-  }, [roomId, userId, setupConnection]);
+  }, [roomId, password, setupConnection, connectToPeer]);
 
   return {
     peer: peerRef.current,
