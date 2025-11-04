@@ -23,13 +23,17 @@ export const usePeerConnection = (roomId: string, password: string, userId: stri
 
   // 发送数据到所有连接的 peer
   const broadcast = useCallback((message: DataChannelMessage) => {
-    connectionsRef.current.forEach((conn) => {
+    console.log('[聊天] 广播消息到所有连接，类型 =', message.type);
+    connectionsRef.current.forEach((conn, pid) => {
       if (conn.open) {
         try {
+          console.log('[聊天] -> 发送到', pid);
           conn.send(message);
         } catch (error) {
-          console.error('Failed to send message:', error);
+          console.error('[聊天] 发送失败：', pid, error);
         }
+      } else {
+        console.warn('[聊天] 连接未打开，跳过：', pid);
       }
     });
   }, []);
@@ -73,7 +77,7 @@ export const usePeerConnection = (roomId: string, password: string, userId: stri
     const peerId = conn.peer;
     
     conn.on('open', () => {
-      console.log('Connection opened with:', peerId);
+      console.log('[聊天] 与对等方连接已打开：', peerId);
       connectionsRef.current.set(peerId, conn);
       updateConnectionStatus(peerId, 'connected');
       
@@ -90,13 +94,13 @@ export const usePeerConnection = (roomId: string, password: string, userId: stri
     });
 
     conn.on('close', () => {
-      console.log('Connection closed with:', peerId);
+      console.log('[聊天] 与对等方连接已关闭：', peerId);
       connectionsRef.current.delete(peerId);
       removePeer(peerId);
     });
 
     conn.on('error', (error) => {
-      console.error('Connection error with:', peerId, error);
+      console.error('[聊天] 与对等方连接错误：', peerId, error);
       updateConnectionStatus(peerId, 'failed');
     });
   }, [handleData, removePeer, updateConnectionStatus]);
@@ -111,7 +115,7 @@ export const usePeerConnection = (roomId: string, password: string, userId: stri
       return;
     }
 
-    console.log('Connecting to:', targetPeerId);
+    console.log('[聊天] 尝试连接到对等方：', targetPeerId);
     updateConnectionStatus(targetPeerId, 'connecting');
     
     const conn = peerRef.current.connect(targetPeerId, {
@@ -142,7 +146,7 @@ export const usePeerConnection = (roomId: string, password: string, userId: stri
       peerRef.current = peer;
 
       peer.on('open', async (id) => {
-        console.log('My peer ID is:', id);
+      console.log('[聊天] 我的 PeerID =', id);
         
         if (!mounted) return;
 
@@ -173,12 +177,12 @@ export const usePeerConnection = (roomId: string, password: string, userId: stri
       });
 
       peer.on('connection', (conn) => {
-        console.log('Incoming connection from:', conn.peer);
+        console.log('[聊天] 收到来自对等方的连接：', conn.peer);
         setupConnection(conn);
       });
 
       peer.on('error', (error) => {
-        console.error('Peer error:', error);
+        console.error('[聊天] Peer 实例错误：', error);
       });
     };
 
