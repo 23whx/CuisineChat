@@ -13,6 +13,8 @@ export const usePeerConnection = (roomId: string, password: string, userId: stri
   const connectionsRef = useRef<Map<string, DataConnection>>(new Map());
   const signalingRef = useRef<RoomSignalingManager | null>(null);
   const userInfoRef = useRef({ userId, username, avatarSeed });
+  const retryCountRef = useRef<Map<string, number>>(new Map());
+  const pendingConnectRef = useRef<Set<string>>(new Set());
   
   // 更新 user info ref
   useEffect(() => {
@@ -51,6 +53,7 @@ export const usePeerConnection = (roomId: string, password: string, userId: stri
           
         case DataChannelMessageType.MESSAGE:
           // 处理聊天消息
+          console.log('[聊天] 收到来自', peerId, '的消息');
           addMessage(message.payload as Message);
           break;
           
@@ -87,6 +90,10 @@ export const usePeerConnection = (roomId: string, password: string, userId: stri
         type: DataChannelMessageType.USER_INFO,
         payload: { id: uid, username: uname, avatarSeed: seed },
       });
+
+      // 清理重试状态
+      retryCountRef.current.delete(peerId);
+      pendingConnectRef.current.delete(peerId);
     });
 
     conn.on('data', (data) => {
@@ -102,6 +109,28 @@ export const usePeerConnection = (roomId: string, password: string, userId: stri
     conn.on('error', (error) => {
       console.error('[聊天] 与对等方连接错误：', peerId, error);
       updateConnectionStatus(peerId, 'failed');
+
+      // 对等方暂不可用时，进行有限次数的重试
+      const errType: any = (error as any)?.type;
+      if (errType === 'peer-unavailable' || errType === 'network' || errType === 'socket-error') {
+        const prev = retryCountRef.current.get(peerId) ?? 0;
+        if (prev < 3) {
+          const next = prev + 1;
+          retryCountRef.current.set(peerId, next);
+          const delay = 1000 * Math.pow(2, prev);
+          console.warn(`[聊天] 对等方暂不可用，准备第 ${next} 次重试，延迟 ${delay}ms ：`, peerId);
+          setTimeout(() => {
+            // 仅当尚未建立连接时重试
+            if (!connectionsRef.current.has(peerId)) {
+              pendingConnectRef.current.delete(peerId);
+              connectToPeer(peerId);
+            }
+          }, delay);
+        } else {
+          console.error('[聊天] 重试次数已达上限，放弃连接：', peerId);
+          pendingConnectRef.current.delete(peerId);
+        }
+      }
     });
   }, [handleData, removePeer, updateConnectionStatus]);
 
@@ -114,6 +143,10 @@ export const usePeerConnection = (roomId: string, password: string, userId: stri
       console.log('Already connected to:', targetPeerId);
       return;
     }
+    if (pendingConnectRef.current.has(targetPeerId)) {
+      console.log('[聊天] 已在连接进行中，跳过：', targetPeerId);
+      return;
+    }
 
     console.log('[聊天] 尝试连接到对等方：', targetPeerId);
     updateConnectionStatus(targetPeerId, 'connecting');
@@ -121,6 +154,7 @@ export const usePeerConnection = (roomId: string, password: string, userId: stri
     const conn = peerRef.current.connect(targetPeerId, {
       reliable: true,
     });
+    pendingConnectRef.current.add(targetPeerId);
     
     setupConnection(conn);
   }, [setupConnection, updateConnectionStatus]);
