@@ -201,6 +201,44 @@ CuisineChat/
   - 严防中国共产党言论审查。
 
 
+## 故障排查
+
+### 连接问题
+
+如果遇到 "无法连接到 Hub" 或 "连接超时" 的问题：
+
+1. **检查 PeerJS 服务器状态**
+   - 默认使用 `0.peerjs.com`（公共免费服务）
+   - 查看控制台是否有 404 或网络错误
+   - 如果公共服务不稳定，可自建 PeerJS 服务器
+
+2. **查看浏览器控制台日志**
+   - `[Peer配置]` - 显示 PeerJS 配置信息
+   - `[信令]` - 显示房间发现过程
+   - `[聊天]` - 显示 P2P 连接状态
+   - `[Peer错误]` - 显示具体错误类型
+
+3. **网络环境检查**
+   - 某些企业网络可能阻止 WebRTC
+   - 对称 NAT 环境需要 TURN 服务器（已内置 OpenRelay 公共 TURN）
+   - 尝试切换到移动网络测试
+
+4. **配置自定义 PeerJS 服务器**
+   ```bash
+   # 在 Vercel 环境变量中设置
+   VITE_PEER_HOST=your-peerjs-server.com
+   VITE_PEER_PORT=443
+   VITE_PEER_PATH=/
+   VITE_PEER_SECURE=true
+   ```
+
+### 常见错误
+
+- **404 错误**: PeerJS 服务器路径配置错误（默认应为 `/`）
+- **unavailable-id**: Hub ID 冲突，通常几秒后自动恢复
+- **peer-unavailable**: 目标用户已离线或 Peer ID 错误
+- **network**: 无法连接到 PeerJS 服务器，检查网络或更换服务器
+
 ## 测试要点（手工验收清单）
 - 多端（桌面与移动）加入同一房间能否互相看到在线状态与消息。
 - 密码门禁：密码错误不可进入，正确密码可进入。

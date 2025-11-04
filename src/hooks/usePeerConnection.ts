@@ -181,9 +181,7 @@ export const usePeerConnection = (roomId: string, password: string, userId: stri
         setupConnection(conn);
       });
 
-      peer.on('error', (error) => {
-        console.error('[聊天] Peer 实例错误：', error);
-      });
+      // 注意：error 事件已在 createPeer 中统一处理，这里不再重复监听
     };
 
     initPeerAndSignaling();
