@@ -150,6 +150,7 @@ export const usePeerConnection = (roomId: string, password: string, userId: stri
         
         // 初始化房间信令
         const signaling = new RoomSignalingManager(
+          peer,
           roomId,
           password,
           uid,

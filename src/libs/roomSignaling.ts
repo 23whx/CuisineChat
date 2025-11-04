@@ -28,8 +28,10 @@ export class RoomSignalingManager {
   private hubConnections: Map<string, DataConnection> = new Map();
   private onPeerDiscovered: (peerId: string) => void;
   private roomPeers: Map<string, { userId: string; username: string; avatarSeed: string }> = new Map();
+  private clientPeer: Peer;
 
   constructor(
+    clientPeer: Peer,
     private roomId: string,
     private password: string,
     private userId: string,
@@ -37,6 +39,7 @@ export class RoomSignalingManager {
     private avatarSeed: string,
     onPeerDiscovered: (peerId: string) => void
   ) {
+    this.clientPeer = clientPeer;
     this.onPeerDiscovered = onPeerDiscovered;
     // 使用房间 ID 和密码的组合创建确定性的 hub peer ID
     this.hubPeerId = `hub_${roomId}_${password}`;
@@ -116,8 +119,8 @@ export class RoomSignalingManager {
         
         if (msg.type === 'join') {
           // 记录新用户信息
-          if (msg.peerId && msg.userId && msg.username && msg.avatarSeed) {
-            this.roomPeers.set(msg.peerId, {
+          if (conn.peer && msg.userId && msg.username && msg.avatarSeed) {
+            this.roomPeers.set(conn.peer, {
               userId: msg.userId,
               username: msg.username,
               avatarSeed: msg.avatarSeed,
@@ -133,7 +136,7 @@ export class RoomSignalingManager {
         
         // 通知其他人有 peer 离开
         this.broadcastFromHub({
-          type: 'peer_joined',
+          type: 'peer_left',
           peerId: conn.peer,
         });
       });
@@ -145,69 +148,66 @@ export class RoomSignalingManager {
    */
   private async connectToHub(): Promise<void> {
     return new Promise((resolve, reject) => {
-      // 创建临时 peer 来连接 hub
-      const tempPeer = createPeer();
+      const myPeerId = this.clientPeer.id;
+      if (!myPeerId) {
+        reject(new Error('Client peer not opened'));
+        return;
+      }
 
-      tempPeer.on('open', (myPeerId) => {
-        console.log('My peer ID:', myPeerId, 'connecting to hub:', this.hubPeerId);
-        
-        const conn = tempPeer.connect(this.hubPeerId, {
-          reliable: true,
-          metadata: {
-            userId: this.userId,
-            username: this.username,
-            avatarSeed: this.avatarSeed,
-          },
-        });
-
-        conn.on('open', () => {
-          console.log('Connected to hub');
-          this.hubConn = conn;
-
-          // 发送加入消息
-          conn.send({
-            type: 'join',
-            peerId: myPeerId,
-            userId: this.userId,
-            username: this.username,
-            avatarSeed: this.avatarSeed,
-          } as RoomHubMessage);
-
-          resolve();
-        });
-
-        conn.on('data', (data: any) => {
-          const msg = data as RoomHubMessage;
-          
-          if (msg.type === 'peer_list' && msg.peers) {
-            console.log('Received peer list from hub:', msg.peers);
-            // 连接到所有现有的 peers
-            msg.peers.forEach(peerId => {
-              if (peerId !== myPeerId) {
-                this.onPeerDiscovered(peerId);
-              }
-            });
-          } else if (msg.type === 'peer_joined' && msg.peerId) {
-            console.log('New peer joined:', msg.peerId);
-            if (msg.peerId !== myPeerId) {
-              this.onPeerDiscovered(msg.peerId);
-            }
-          }
-        });
-
-        conn.on('error', (error) => {
-          console.error('Hub connection error:', error);
-          reject(error);
-        });
-
-        conn.on('close', () => {
-          console.log('Hub connection closed');
-        });
+      console.log('My peer ID:', myPeerId, 'connecting to hub:', this.hubPeerId);
+      const conn = this.clientPeer.connect(this.hubPeerId, {
+        reliable: true,
+        metadata: {
+          userId: this.userId,
+          username: this.username,
+          avatarSeed: this.avatarSeed,
+        },
       });
 
-      tempPeer.on('error', (error) => {
-        console.error('Temp peer error:', error);
+      conn.on('open', () => {
+        console.log('Connected to hub');
+        this.hubConn = conn;
+
+        // 发送加入消息，告知 hub 我们用于聊天的 peerId（即 clientPeer.id）
+        conn.send({
+          type: 'join',
+          peerId: myPeerId,
+          userId: this.userId,
+          username: this.username,
+          avatarSeed: this.avatarSeed,
+        } as RoomHubMessage);
+
+        resolve();
+      });
+
+      conn.on('data', (data: any) => {
+        const msg = data as RoomHubMessage;
+        
+        if (msg.type === 'peer_list' && msg.peers) {
+          console.log('Received peer list from hub:', msg.peers);
+          msg.peers.forEach(peerId => {
+            if (peerId !== myPeerId) {
+              this.onPeerDiscovered(peerId);
+            }
+          });
+        } else if (msg.type === 'peer_joined' && msg.peerId) {
+          console.log('New peer joined:', msg.peerId);
+          if (msg.peerId !== myPeerId) {
+            this.onPeerDiscovered(msg.peerId);
+          }
+        } else if (msg.type === 'peer_left' && msg.peerId) {
+          // 可选：处理用户离开
+          console.log('Peer left:', msg.peerId);
+        }
+      });
+
+      conn.on('error', (error) => {
+        console.error('Hub connection error:', error);
         reject(error);
+      });
+
+      conn.on('close', () => {
+        console.log('Hub connection closed');
       });
 
       setTimeout(() => reject(new Error('Hub connection timeout')), 10000);
