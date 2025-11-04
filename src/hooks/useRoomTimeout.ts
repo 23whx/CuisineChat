@@ -11,7 +11,7 @@ export const useRoomTimeout = (timeoutMinutes: number = 10) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { peers, currentUser } = useChatStore();
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<number | null>(null);
   const warningShownRef = useRef(false);
 
   useEffect(() => {
