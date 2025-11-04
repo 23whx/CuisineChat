@@ -1,37 +1,40 @@
 /**
- * 简化的房间信令服务
- * 策略：第一个进入房间的用户会尝试创建一个 "房间 hub" peer
- * 后续用户连接到这个 hub，hub 会告诉他们房间里还有谁
+ * 简化的房间信令服务 v2
+ * 新策略：使用轻量级的 "发现协议"
+ * - 不再创建单独的 Hub Peer
+ * - 使用特殊的元数据标记来识别同房间用户
+ * - 通过尝试连接预定义的 "房间信标" 来发现其他用户
  */
 
 import Peer, { DataConnection } from 'peerjs';
 import { createPeer } from './peerConfig';
 
-interface RoomHubMessage {
-  type: 'join' | 'peer_list' | 'peer_joined' | 'relay';
+interface BeaconMessage {
+  type: 'announce' | 'peer_list' | 'relay';
+  roomId: string;
+  password: string;
   peerId?: string;
   peers?: string[];
   userId?: string;
   username?: string;
   avatarSeed?: string;
-  data?: any;
 }
 
 /**
- * 房间信令管理器
+ * 房间信令管理器 v2
+ * 使用信标机制进行房间发现
  */
 export class RoomSignalingManager {
-  private hubPeerId: string;
-  private isHub: boolean = false;
-  private hubPeer: Peer | null = null;
-  private hubConn: DataConnection | null = null;
-  private hubConnections: Map<string, DataConnection> = new Map();
+  private beaconPeerId: string;
+  private isBeacon: boolean = false;
+  private beaconPeer: Peer | null = null;
+  private beaconConnections: Map<string, DataConnection> = new Map();
   private onPeerDiscovered: (peerId: string) => void;
-  private roomPeers: Map<string, { userId: string; username: string; avatarSeed: string }> = new Map();
-  private clientPeer: Peer;
+  private roomPeers: Set<string> = new Set();
+  private myPeerId: string;
 
   constructor(
-    clientPeer: Peer,
+    private clientPeer: Peer,
     private roomId: string,
     private password: string,
     private userId: string,
@@ -39,233 +42,185 @@ export class RoomSignalingManager {
     private avatarSeed: string,
     onPeerDiscovered: (peerId: string) => void
   ) {
-    this.clientPeer = clientPeer;
     this.onPeerDiscovered = onPeerDiscovered;
-    // 使用房间 ID 和密码的组合创建确定性的 hub peer ID
-    this.hubPeerId = `hub_${roomId}_${password}`;
+    this.myPeerId = clientPeer.id || '';
+    // 使用房间 ID 和密码创建信标 ID
+    this.beaconPeerId = `beacon_${roomId}_${password}`;
   }
 
   /**
    * 启动信令
    */
   async start(): Promise<void> {
-    console.log('[信令] 启动房间信令，Hub ID =', this.hubPeerId);
+    console.log('[信令] 启动，信标 ID =', this.beaconPeerId, '我的 ID =', this.myPeerId);
 
-    // 尝试成为 hub
+    // 尝试成为信标
     try {
-      this.hubPeer = createPeer(this.hubPeerId);
-      
-      await new Promise<void>((resolve, reject) => {
-        if (!this.hubPeer) {
-          reject(new Error('Failed to create hub peer'));
-          return;
-        }
-
-        this.hubPeer.on('open', (id) => {
-          console.log('[信令][Hub] 成为房间 Hub 成功，ID =', id);
-          this.isHub = true;
-          
-          // Hub 自己也要加入房间列表（使用 clientPeer 的 ID）
-          if (this.clientPeer.id) {
-            this.roomPeers.set(this.clientPeer.id, {
-              userId: this.userId,
-              username: this.username,
-              avatarSeed: this.avatarSeed,
-            });
-            console.log('[信令][Hub] 已将自身加入房间列表：', this.clientPeer.id);
-          }
-          
-          this.setupHubListeners();
-          resolve();
-        });
-
-        this.hubPeer.on('error', (error: any) => {
-          console.log('[信令] 无法成为 Hub（可能已存在）：', error?.type || error);
-          if (error.type === 'unavailable-id') {
-            // Hub 已存在，作为普通客户端连接
-            reject(error);
-          }
-        });
-
-        // 超时处理
-        setTimeout(() => reject(new Error('Hub creation timeout')), 5000);
-      });
+      await this.tryBecomeBeacon();
     } catch (error) {
-      console.log('[信令] 以客户端身份加入已存在的 Hub');
-      this.isHub = false;
-      await this.connectToHub();
+      console.log('[信令] 以普通节点身份加入');
+      await this.joinAsClient();
     }
   }
 
   /**
-   * 设置 Hub 监听器
+   * 尝试成为信标
    */
-  private setupHubListeners() {
-    if (!this.hubPeer) return;
+  private async tryBecomeBeacon(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.beaconPeer = createPeer(this.beaconPeerId);
 
-    this.hubPeer.on('connection', (conn) => {
-      console.log('[信令][Hub] 收到连接：来自', conn.peer);
-      
-      conn.on('open', () => {
-        this.hubConnections.set(conn.peer, conn);
+      const timeout = window.setTimeout(() => {
+        reject(new Error('成为信标超时'));
+      }, 5000);
 
-        // 先将新用户添加到房间列表（使用默认信息，后续 join 消息会更新）
-        this.roomPeers.set(conn.peer, {
-          userId: conn.peer,
-          username: 'Unknown',
-          avatarSeed: conn.peer,
-        });
-
-        // 发送当前房间内的所有 peers（不包括新加入的这个）
-        const peers = Array.from(this.roomPeers.keys()).filter(p => p !== conn.peer);
-        conn.send({
-          type: 'peer_list',
-          peers,
-        } as RoomHubMessage);
-
-        console.log('[信令][Hub] 已发送房间内 peers 给', conn.peer, '：', peers);
-
-        // 通知其他人有新 peer 加入
-        this.broadcastFromHub({
-          type: 'peer_joined',
-          peerId: conn.peer,
-        }, conn.peer);
+      this.beaconPeer.on('open', (id) => {
+        window.clearTimeout(timeout);
+        console.log('[信令][信标] 成为房间信标成功，ID =', id);
+        this.isBeacon = true;
+        
+        // 将自己加入房间列表
+        this.roomPeers.add(this.myPeerId);
+        console.log('[信令][信标] 房间成员：', Array.from(this.roomPeers));
+        
+        this.setupBeaconListeners();
+        resolve();
       });
 
-      conn.on('data', (data: any) => {
-        const msg = data as RoomHubMessage;
-        
-        if (msg.type === 'join') {
-          // 记录新用户信息
-          if (conn.peer && msg.userId && msg.username && msg.avatarSeed) {
-            this.roomPeers.set(conn.peer, {
-              userId: msg.userId,
-              username: msg.username,
-              avatarSeed: msg.avatarSeed,
-            });
-            console.log('[信令][Hub] 新用户完成注册：', conn.peer, msg.username);
+      this.beaconPeer.on('error', (error: any) => {
+        window.clearTimeout(timeout);
+        if (error.type === 'unavailable-id') {
+          console.log('[信令] 信标已存在，作为普通节点加入');
+          if (this.beaconPeer) {
+            this.beaconPeer.destroy();
+            this.beaconPeer = null;
           }
+          reject(error);
         }
-      });
-
-      conn.on('close', () => {
-        console.log('[信令][Hub] 连接关闭：', conn.peer);
-        this.hubConnections.delete(conn.peer);
-        this.roomPeers.delete(conn.peer);
-        
-        // 通知其他人有 peer 离开
-        this.broadcastFromHub({
-          type: 'peer_left',
-          peerId: conn.peer,
-        });
       });
     });
   }
 
   /**
-   * 连接到 Hub
+   * 设置信标监听器
    */
-  private async connectToHub(): Promise<void> {
-    const tryConnect = (attempt: number): Promise<void> => {
-      return new Promise((resolve, reject) => {
-        const myPeerId = this.clientPeer.id;
-        if (!myPeerId) {
-          reject(new Error('[信令] 客户端 Peer 尚未打开，无法连接 Hub'));
-          return;
-        }
+  private setupBeaconListeners() {
+    if (!this.beaconPeer) return;
 
-        console.log(`[信令] [尝试 ${attempt}] 我的 PeerID = ${myPeerId}，连接 Hub = ${this.hubPeerId}`);
-        const conn = this.clientPeer.connect(this.hubPeerId, {
-          reliable: true,
-          metadata: {
-            userId: this.userId,
-            username: this.username,
-            avatarSeed: this.avatarSeed,
-          },
-        });
+    this.beaconPeer.on('connection', (conn) => {
+      console.log('[信令][信标] 收到连接请求：', conn.peer);
 
-        let timeoutId = window.setTimeout(() => {
-          console.warn(`[信令] 连接 Hub 超时（尝试 ${attempt}）`);
-          try { conn.close(); } catch {}
-          reject(new Error('Hub connection timeout'));
-        }, 20000);
+      conn.on('open', () => {
+        this.beaconConnections.set(conn.peer, conn);
+        
+        // 将新成员加入房间
+        this.roomPeers.add(conn.peer);
+        console.log('[信令][信标] 新成员加入，当前成员：', Array.from(this.roomPeers));
+        
+        // 发送房间成员列表（排除请求者自己）
+        const peers = Array.from(this.roomPeers).filter(p => p !== conn.peer);
+        conn.send({
+          type: 'peer_list',
+          roomId: this.roomId,
+          password: this.password,
+          peers,
+        } as BeaconMessage);
+        
+        console.log('[信令][信标] 已发送成员列表给', conn.peer, '：', peers);
 
-        conn.on('open', () => {
-          window.clearTimeout(timeoutId);
-          console.log('[信令] 已连接 Hub');
-          this.hubConn = conn;
-  
-          // 发送加入消息
-          conn.send({
-            type: 'join',
-            peerId: myPeerId,
-            userId: this.userId,
-            username: this.username,
-            avatarSeed: this.avatarSeed,
-          } as RoomHubMessage);
-  
-          resolve();
-        });
-
-        conn.on('data', (data: any) => {
-          const msg = data as RoomHubMessage;
-          if (msg.type === 'peer_list' && msg.peers) {
-            console.log('[信令] 收到 Hub 返回的房间 peers：', msg.peers);
-            msg.peers.forEach(peerId => {
-              if (peerId !== myPeerId) {
-                console.log('[信令] 发现对等方：', peerId);
-                this.onPeerDiscovered(peerId);
-              }
-            });
-          } else if (msg.type === 'peer_joined' && msg.peerId) {
-            console.log('[信令] 有新用户加入：', msg.peerId);
-            if (msg.peerId !== myPeerId) {
-              this.onPeerDiscovered(msg.peerId);
-            }
-          } else if (msg.type === 'peer_left' && msg.peerId) {
-            console.log('[信令] 有用户离开：', msg.peerId);
-          }
-        });
-
-        conn.on('error', (error) => {
-          window.clearTimeout(timeoutId);
-          console.error('[信令] 连接 Hub 出错：', error);
-          reject(error);
-        });
-
-        conn.on('close', () => {
-          window.clearTimeout(timeoutId);
-          console.log('[信令] 与 Hub 的连接已关闭');
-        });
+        // 通知其他成员有新人加入
+        this.broadcastToRoom({
+          type: 'announce',
+          roomId: this.roomId,
+          password: this.password,
+          peerId: conn.peer,
+        }, conn.peer);
       });
-    };
 
-    // 重试 3 次，并在失败后指数退避
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        await tryConnect(attempt);
-        return;
-      } catch (err) {
-        console.warn(`[信令] 第 ${attempt} 次连接 Hub 失败：`, err);
-        if (attempt < 3) {
-          const waitMs = 1000 * Math.pow(2, attempt - 1);
-          await new Promise(r => setTimeout(r, waitMs));
-        }
-      }
-    }
-    throw new Error('[信令] 多次尝试后无法连接到 Hub');
+      conn.on('close', () => {
+        console.log('[信令][信标] 成员离开：', conn.peer);
+        this.beaconConnections.delete(conn.peer);
+        this.roomPeers.delete(conn.peer);
+        console.log('[信令][信标] 当前成员：', Array.from(this.roomPeers));
+      });
+
+      conn.on('error', (err) => {
+        console.error('[信令][信标] 连接错误：', conn.peer, err);
+      });
+    });
   }
 
   /**
-   * 从 Hub 广播消息
+   * 作为普通节点加入
    */
-  private broadcastFromHub(message: RoomHubMessage, excludePeerId?: string) {
-    this.hubConnections.forEach((conn, peerId) => {
+  private async joinAsClient(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      console.log('[信令] 连接到信标：', this.beaconPeerId);
+      
+      const conn = this.clientPeer.connect(this.beaconPeerId, {
+        reliable: true,
+        metadata: {
+          roomId: this.roomId,
+          password: this.password,
+          userId: this.userId,
+          username: this.username,
+          avatarSeed: this.avatarSeed,
+        },
+      });
+
+      const timeout = window.setTimeout(() => {
+        console.warn('[信令] 连接信标超时');
+        try { conn.close(); } catch {}
+        reject(new Error('连接信标超时'));
+      }, 15000);
+
+      conn.on('open', () => {
+        window.clearTimeout(timeout);
+        console.log('[信令] 已连接到信标');
+        resolve();
+      });
+
+      conn.on('data', (data: any) => {
+        const msg = data as BeaconMessage;
+
+        if (msg.type === 'peer_list' && msg.peers) {
+          console.log('[信令] 收到房间成员列表：', msg.peers);
+          msg.peers.forEach(peerId => {
+            if (peerId !== this.myPeerId) {
+              console.log('[信令] 发现成员：', peerId);
+              this.onPeerDiscovered(peerId);
+            }
+          });
+        } else if (msg.type === 'announce' && msg.peerId) {
+          console.log('[信令] 新成员加入：', msg.peerId);
+          if (msg.peerId !== this.myPeerId) {
+            this.onPeerDiscovered(msg.peerId);
+          }
+        }
+      });
+
+      conn.on('error', (error) => {
+        window.clearTimeout(timeout);
+        console.error('[信令] 连接信标出错：', error);
+        reject(error);
+      });
+
+      conn.on('close', () => {
+        console.log('[信令] 与信标的连接已关闭');
+      });
+    });
+  }
+
+  /**
+   * 向房间广播消息
+   */
+  private broadcastToRoom(message: BeaconMessage, excludePeerId?: string) {
+    this.beaconConnections.forEach((conn, peerId) => {
       if (peerId !== excludePeerId && conn.open) {
         try {
           conn.send(message);
         } catch (error) {
-          console.error('Failed to broadcast to', peerId, error);
+          console.error('[信令][信标] 广播失败：', peerId, error);
         }
       }
     });
@@ -275,19 +230,14 @@ export class RoomSignalingManager {
    * 停止信令
    */
   stop() {
-    if (this.hubConn) {
-      this.hubConn.close();
-      this.hubConn = null;
+    if (this.beaconPeer) {
+      this.beaconConnections.forEach(conn => {
+        try { conn.close(); } catch {}
+      });
+      this.beaconConnections.clear();
+      this.beaconPeer.destroy();
+      this.beaconPeer = null;
     }
-
-    if (this.hubPeer) {
-      this.hubConnections.forEach(conn => conn.close());
-      this.hubConnections.clear();
-      this.hubPeer.destroy();
-      this.hubPeer = null;
-    }
-
     this.roomPeers.clear();
   }
 }
-
