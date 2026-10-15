@@ -27,25 +27,31 @@
     <link rel="alternate" href="https://cuisinechat.vercel.app/" hreflang="ja" />
     <link rel="alternate" href="https://cuisinechat.vercel.app/" hreflang="ko" />
     
-    <!-- Open Graph / Facebook -->
+    <!-- Open Graph / Facebook / LINE / WhatsApp -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://cuisinechat.vercel.app/" />
-    <meta property="og:title" content="CuisineChat - Temporary Chat Room" />
-    <meta property="og:description" content="A temporary, secure P2P chat room. No registration required." />
-    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:title" content="CuisineChat — Private chat rooms that vanish" />
+    <meta property="og:description" content="One room ID + a 3-digit code. Chat peer-to-peer with photos, files and voice — no sign-up, nothing stored." />
+    <!-- 爬蟲不會解析相對路徑，必須使用完整網址；原稿見 scripts/og/ -->
+    <meta property="og:image" content="https://cuisinechat.vercel.app/og-image.jpg" />
+    <meta property="og:image:secure_url" content="https://cuisinechat.vercel.app/og-image.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="CuisineChat: a glowing lantern beside a chat preview. One room ID plus a 3-digit code; chat, share, then it vanishes." />
     <meta property="og:site_name" content="CuisineChat" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:locale:alternate" content="zh_CN" />
     <meta property="og:locale:alternate" content="ja_JP" />
     <meta property="og:locale:alternate" content="ko_KR" />
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://cuisinechat.vercel.app/" />
-    <meta property="twitter:title" content="CuisineChat - Temporary Chat Room" />
-    <meta property="twitter:description" content="A temporary, secure P2P chat room. No registration required." />
-    <meta property="twitter:image" content="/og-image.png" />
-    
+
+    <!-- Twitter / X（規範使用 name 而非 property） -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="CuisineChat — Private chat rooms that vanish" />
+    <meta name="twitter:description" content="One room ID + a 3-digit code. Chat peer-to-peer with photos, files and voice — no sign-up, nothing stored." />
+    <meta name="twitter:image" content="https://cuisinechat.vercel.app/og-image.jpg" />
+    <meta name="twitter:image:alt" content="CuisineChat: a glowing lantern beside a chat preview. One room ID plus a 3-digit code; chat, share, then it vanishes." />
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -75,7 +81,8 @@
     }
     </script>
     
-    <!-- Google AdSense -->
+    <!-- Google AdSense：本站是單頁應用，所有路由（含 /room/*）共用這個 index.html，因此每個頁面都會載入 -->
+    <meta name="google-adsense-account" content="ca-pub-4880646654838411" />
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4880646654838411"
      crossorigin="anonymous"></script>
   </head>

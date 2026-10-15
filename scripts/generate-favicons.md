@@ -1,5 +1,7 @@
 # 生成 Favicon 图标文件
 
+> **已过时：** 图标已改为「深夜食堂」灯笼设计，当前做法见 `scripts/icons/README.md`，分享图见 `scripts/og/README.md`。
+
 ## 🎯 需要生成的文件
 
 从 `public/favicon.svg` 生成以下文件：

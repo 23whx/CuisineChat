@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CuisineChat App Icon</title>
+<!-- 512×512 主畫面圖示原稿（iOS apple-touch-icon / PWA 192、512）。
+     燈籠完整落在中央 80% 的安全區內，可同時作為 Android maskable 圖示。 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@900&text=%E9%A3%9F&display=block">
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  html, body { width: 512px; height: 512px; overflow: hidden; }
+  body {
+    /* 不透明、滿版：iOS 會自行加圓角，透明區域會被補成黑色 */
+    background: radial-gradient(circle at 50% 47%, rgba(242,165,65,.42), transparent 52%), #15110e;
+    display: grid; place-items: center;
+  }
+  .lantern {
+    position: relative; width: 210px; height: 258px; margin-top: -14px;
+    border-radius: 46% / 40%;
+    background:
+      repeating-linear-gradient(180deg, transparent 0 34px, rgba(120,40,10,.2) 34px 37px),
+      radial-gradient(circle at 50% 42%, #ffd48a, #f2a541 46%, #c2541f);
+    box-shadow: 0 0 70px rgba(242,165,65,.65), 0 0 160px rgba(242,165,65,.3);
+    display: grid; place-items: center;
+    font-family: 'Noto Serif TC', serif; font-weight: 900; font-size: 112px; color: #3b1a16; line-height: 1;
+  }
+  .lantern::before, .lantern::after { content: ''; position: absolute; left: 28%; right: 28%; height: 20px; background: #2a1712; border-radius: 6px; }
+  .lantern::before { top: -10px; } .lantern::after { bottom: -10px; }
+  .tassel { position: absolute; bottom: -54px; left: 50%; width: 7px; height: 44px; margin-left: -3.5px; background: #d64933; border-radius: 4px; }
+</style>
+</head>
+<body>
+  <div class="lantern">食<span class="tassel"></span></div>
+</body>
+</html>

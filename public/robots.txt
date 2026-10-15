@@ -1,3 +1,7 @@
+# AdSense 爬蟲需要能讀取所有頁面才能投放廣告
+User-agent: Mediapartners-Google
+Allow: /
+
 User-agent: *
 Allow: /
 # 不索引动态房间路径
