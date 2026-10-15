@@ -2,45 +2,48 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '@/store/uiStore';
 
+type LanguageCode = 'zh' | 'en' | 'ja' | 'ko';
+
 interface LanguageSwitcherProps {
   variant?: 'full' | 'compact';
   className?: string;
 }
 
-export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ 
+// 用文字而不是國旗：Windows 不渲染國旗 emoji，只會顯示兩個字母
+const languages: { code: LanguageCode; short: string; label: string }[] = [
+  { code: 'zh', short: '中', label: '中文' },
+  { code: 'en', short: 'EN', label: 'English' },
+  { code: 'ja', short: '日', label: '日本語' },
+  { code: 'ko', short: '한', label: '한국어' },
+];
+
+export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   variant = 'full',
-  className = '' 
+  className = '',
 }) => {
   const { i18n } = useTranslation();
-  const { language, setLanguage } = useUIStore();
+  const language = useUIStore((s) => s.language);
+  const setLanguage = useUIStore((s) => s.setLanguage);
 
-  const languages = [
-    { code: 'zh', label: '中文', flag: '🇨🇳' },
-    { code: 'en', label: 'English', flag: '🇺🇸' },
-    { code: 'ja', label: '日本語', flag: '🇯🇵' },
-    { code: 'ko', label: '한국어', flag: '🇰🇷' },
-  ];
-
-  const handleLanguageChange = (langCode: string) => {
-    setLanguage(langCode as any);
-    i18n.changeLanguage(langCode);
+  const handleLanguageChange = (code: LanguageCode) => {
+    setLanguage(code);
+    i18n.changeLanguage(code);
   };
 
   if (variant === 'compact') {
     return (
-      <div className={`flex gap-2 ${className}`}>
+      <div className={`inline-flex gap-0.5 p-0.5 rounded-lg bg-night-surface border border-night-line ${className}`}>
         {languages.map((lang) => (
           <button
             key={lang.code}
             onClick={() => handleLanguageChange(lang.code)}
-            className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-              language === lang.code
-                ? 'bg-wechat-500 text-white'
-                : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
-            }`}
+            aria-pressed={language === lang.code}
             title={lang.label}
+            className={`min-w-[34px] px-2 py-1 rounded-md text-xs transition-colors ${
+              language === lang.code ? 'bg-night-raised text-lantern' : 'text-ink-muted hover:text-ink'
+            }`}
           >
-            {lang.flag}
+            {lang.short}
           </button>
         ))}
       </div>
@@ -48,24 +51,21 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   }
 
   return (
-    <div className={`flex gap-2 ${className}`}>
+    <div className={`grid grid-cols-2 gap-2 ${className}`}>
       {languages.map((lang) => (
         <button
           key={lang.code}
           onClick={() => handleLanguageChange(lang.code)}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          aria-pressed={language === lang.code}
+          className={`py-2 px-4 rounded-xl border text-sm transition-colors ${
             language === lang.code
-              ? 'bg-wechat-500 text-white'
-              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+              ? 'border-lantern bg-lantern/10 text-lantern'
+              : 'border-night-border text-ink-muted hover:text-ink hover:bg-night-raised'
           }`}
         >
-          <span className="mr-1">{lang.flag}</span>
           {lang.label}
         </button>
       ))}
     </div>
   );
 };
-
-
-

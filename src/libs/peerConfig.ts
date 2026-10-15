@@ -1,4 +1,4 @@
-import Peer from 'peerjs';
+import Peer, { type PeerOptions } from 'peerjs';
 
 // 从环境变量获取配置（提供合理的默认值）
 const PEER_SECURE = (import.meta.env.VITE_PEER_SECURE ?? 'true') === 'true';
@@ -27,7 +27,7 @@ try {
       ICE_SERVERS = parsed as RTCIceServer[];
     }
   }
-} catch (e) {
+} catch {
   // 使用默认配置
 }
 export { ICE_SERVERS };
@@ -35,7 +35,7 @@ export { ICE_SERVERS };
 /**
  * 创建 Peer 实例的配置
  */
-export const createPeerConfig = (peerId?: string): Peer.PeerJSOption => {
+export const createPeerConfig = (): PeerOptions => {
   return {
     host: PEER_HOST,
     port: PEER_PORT,
@@ -52,7 +52,7 @@ export const createPeerConfig = (peerId?: string): Peer.PeerJSOption => {
  * 创建 Peer 实例
  */
 export const createPeer = (peerId?: string): Peer => {
-  const config = createPeerConfig(peerId);
+  const config = createPeerConfig();
   console.log('[Peer配置]', {
     id: peerId || '(随机)',
     host: config.host,
@@ -62,7 +62,19 @@ export const createPeer = (peerId?: string): Peer => {
   });
   
   try {
-    const peer = new Peer(peerId, config);
+    // 注意：peerId 为 undefined 时不能直接传给 Peer，否则会被当作 id
+    const peer = peerId ? new Peer(peerId, config) : new Peer(config);
+
+    // 与信令服务器的 WebSocket 断开后（网络抖动、服务端空闲踢出）PeerJS 不会自动重连。
+    // destroy() 内部也会触发 disconnected，所以延迟检查以区分主动销毁。
+    peer.on('disconnected', () => {
+      window.setTimeout(() => {
+        if (!peer.destroyed && peer.disconnected) {
+          console.warn('[Peer] 与信令服务器断开，尝试重连');
+          peer.reconnect();
+        }
+      }, 1000);
+    });
     
     // 添加通用错误处理
     peer.on('error', (error: any) => {

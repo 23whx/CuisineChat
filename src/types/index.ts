@@ -9,6 +9,9 @@ export interface User {
   joinedAt: number;
 }
 
+// 通过数据通道交换的用户信息（对方不会发送本地生成的 avatar / joinedAt）
+export type PeerUser = Pick<User, 'id' | 'username' | 'avatarSeed'>;
+
 // 消息类型
 export enum MessageType {
   TEXT = 'text',
@@ -41,6 +44,7 @@ export interface ImageMessage extends BaseMessage {
   imageData: string; // base64
   filename: string;
   size: number;
+  mimeType?: string;
 }
 
 // 文件消息
@@ -59,6 +63,7 @@ export interface AudioMessage extends BaseMessage {
   audioData: string; // base64
   duration: number; // 时长（秒）
   size: number;
+  mimeType?: string; // 录音实际编码（Safari 不支持 webm）
 }
 
 // 系统消息
@@ -88,8 +93,8 @@ export enum ConnectionStatus {
 // Peer 连接信息
 export interface PeerConnection {
   peerId: string;
-  connection: DataConnection;
-  user: User;
+  connection?: DataConnection;
+  user: PeerUser;
   status: ConnectionStatus;
 }
 

@@ -1,33 +1,25 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-type Theme = 'light' | 'dark';
 type Language = 'zh' | 'en' | 'ja' | 'ko';
 
 interface UIState {
-  theme: Theme;
   language: Language;
-  
-  toggleTheme: () => void;
+
   setLanguage: (language: Language) => void;
 }
 
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
-      theme: 'light',
-      language: 'en', // 默认英文
-
-      toggleTheme: () =>
-        set((state) => ({
-          theme: state.theme === 'light' ? 'dark' : 'light',
-        })),
+      language: 'en', // 默認英文
 
       setLanguage: (language) => set({ language }),
     }),
     {
       name: 'cuisine-chat-ui',
+      // 舊版本還存了 theme，只持久化語言，順便把它清掉
+      partialize: (state) => ({ language: state.language }),
     }
   )
 );
-

@@ -17,7 +17,10 @@
     "tips": "ヒント",
     "tip1": "ランダムな料理名が一時的なユーザー名として割り当てられます",
     "tip2": "チャット履歴は保存されず、ページを更新すると消えます",
-    "tip3": "友達と同じルームIDとパスワードを使用してください"
+    "tip3": "友達と同じルームIDとパスワードを使用してください",
+    "noren": "料理談義",
+    "tagline": "今夜の席は、合言葉を知る人だけに",
+    "enter": "暖簾をくぐる"
   },
   "room": {
     "online": "オンライン",
@@ -34,7 +37,8 @@
     "settings": "設定",
     "emptyRoomTimeout": "{{minutes}}分間、他の人が参加していません。退出しますか？",
     "roomEmpty": "現在、ルームにはあなた一人です",
-    "waitingForOthers": "他の人の参加を待っています..."
+    "waitingForOthers": "他の人の参加を待っています...",
+    "open": "営業中"
   },
   "audio": {
     "recording": "録音中...",
@@ -58,9 +62,6 @@
     "username": "ユーザー名",
     "usernamePlaceholder": "新しいユーザー名を入力",
     "changeUsername": "ユーザー名を変更",
-    "theme": "テーマ",
-    "light": "ライト",
-    "dark": "ダーク",
     "language": "言語",
     "chinese": "中文",
     "english": "English",
@@ -75,4 +76,3 @@
     "uploadFailed": "アップロードに失敗しました"
   }
 }
-

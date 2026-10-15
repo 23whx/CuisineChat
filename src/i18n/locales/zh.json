@@ -17,7 +17,10 @@
     "tips": "提示",
     "tip1": "你将获得一个随机的美食名称作为临时用户名",
     "tip2": "聊天记录不会保存，刷新页面后会消失",
-    "tip3": "确保与朋友使用相同的房间 ID 和密码"
+    "tip3": "确保与朋友使用相同的房间 ID 和密码",
+    "noren": "料理闲聊",
+    "tagline": "今晚的座位，只留给知道暗号的人",
+    "enter": "掀帘入座"
   },
   "room": {
     "online": "在线",
@@ -34,7 +37,8 @@
     "settings": "设置",
     "emptyRoomTimeout": "房间已经 {{minutes}} 分钟没有其他人加入了。是否离开房间？",
     "roomEmpty": "房间内暂时只有你一人",
-    "waitingForOthers": "等待其他人加入..."
+    "waitingForOthers": "等待其他人加入...",
+    "open": "营业中"
   },
   "audio": {
     "recording": "正在录音...",
@@ -58,9 +62,6 @@
     "username": "用户名",
     "usernamePlaceholder": "输入新用户名",
     "changeUsername": "更改用户名",
-    "theme": "主题",
-    "light": "浅色",
-    "dark": "深色",
     "language": "语言",
     "chinese": "中文",
     "english": "English",
@@ -75,4 +76,3 @@
     "uploadFailed": "上传失败"
   }
 }
-

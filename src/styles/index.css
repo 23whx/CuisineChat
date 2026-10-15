@@ -3,55 +3,74 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    color-scheme: dark;
+  }
+
   body {
-    @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors;
+    @apply bg-night text-ink font-sans antialiased;
   }
 }
 
 @layer components {
-  /* 微信风格的按钮 */
-  .btn-wechat {
-    @apply bg-wechat-500 hover:bg-wechat-600 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+  /* 主按鈕：燈籠琥珀 */
+  .btn-lantern {
+    @apply bg-gradient-to-b from-lantern-light to-lantern-dark text-lantern-ink font-bold py-2 px-4 rounded-xl shadow-glow transition-all hover:brightness-110 active:scale-[0.97] disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:brightness-100 disabled:active:scale-100;
   }
-  
-  .btn-wechat-outline {
-    @apply border-2 border-wechat-500 text-wechat-500 hover:bg-wechat-50 dark:hover:bg-wechat-900 font-medium py-2 px-4 rounded-lg transition-colors;
+
+  /* 次要按鈕：描邊 */
+  .btn-ghost {
+    @apply border border-night-border text-lantern font-medium py-2 px-4 rounded-xl transition-colors hover:bg-night-raised;
   }
-  
-  /* 输入框样式 */
+
+  /* 圖示按鈕 */
+  .btn-icon {
+    @apply p-2 rounded-lg text-ink-muted transition-colors hover:text-ink hover:bg-night-raised;
+  }
+
+  /* 輸入框 */
   .input-field {
-    @apply w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-wechat-500 bg-white dark:bg-gray-800 transition-colors;
+    @apply w-full px-4 py-2.5 rounded-xl border border-night-border bg-night-field text-ink placeholder:text-ink-muted/70 outline-none transition-shadow focus:border-lantern focus:shadow-[0_0_0_3px_rgba(242,165,65,0.18),0_0_20px_-6px_#f2a541];
   }
-  
-  /* 消息气泡 */
+
+  /* 消息氣泡 */
   .message-bubble {
-    @apply max-w-xs md:max-w-md lg:max-w-lg px-4 py-2 rounded-2xl break-words;
+    @apply max-w-xs md:max-w-md lg:max-w-lg px-4 py-2 rounded-[18px] break-words leading-relaxed;
   }
-  
+
   .message-bubble-sent {
-    @apply message-bubble bg-wechat-500 text-white rounded-br-sm;
+    @apply message-bubble bg-lantern text-lantern-ink shadow-bubble;
   }
-  
+
   .message-bubble-received {
-    @apply message-bubble bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-sm;
+    @apply message-bubble bg-night-raised text-ink;
   }
-  
-  /* 滚动条样式 */
+
+  /* 彈窗 */
+  .modal-backdrop {
+    @apply fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4;
+  }
+
+  .modal-panel {
+    @apply bg-night-surface border border-night-line rounded-2xl w-full shadow-2xl;
+  }
+
+  /* 滾動條 */
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar-track {
-    @apply bg-gray-100 dark:bg-gray-800;
+    @apply bg-transparent;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+    @apply bg-night-border rounded-full;
   }
-  
+
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400 dark:bg-gray-500;
+    @apply bg-ink-muted;
   }
 }
 
@@ -59,5 +78,14 @@
   .text-balance {
     text-wrap: balance;
   }
-}
 
+  /* 首頁燈籠 */
+  .lantern-body {
+    border-radius: 46% / 40%;
+    background: radial-gradient(circle at 50% 45%, #ffcf7a, #f2a541 45%, #c2541f);
+  }
+
+  .lantern-glow {
+    background: radial-gradient(circle at 50% 30%, rgba(242, 165, 65, 0.18), transparent 55%);
+  }
+}

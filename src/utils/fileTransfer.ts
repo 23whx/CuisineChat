@@ -7,7 +7,7 @@ const CHUNK_SIZE = 16 * 1024; // 16KB per chunk
 /**
  * 将文件转换为 base64
  */
-export const fileToBase64 = (file: File): Promise<string> => {
+export const fileToBase64 = (file: Blob): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -23,15 +23,13 @@ export const fileToBase64 = (file: File): Promise<string> => {
  * 将 base64 转换为 Blob
  */
 export const base64ToBlob = (base64: string, mimeType: string): Blob => {
-  const byteCharacters = atob(base64);
-  const byteNumbers = new Array(byteCharacters.length);
-  
-  for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  const binary = atob(base64);
+  // 直接写入 Uint8Array，避免先创建同样长度的普通数组（大文件时内存翻倍且很慢）
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
   }
-  
-  const byteArray = new Uint8Array(byteNumbers);
-  return new Blob([byteArray], { type: mimeType });
+  return new Blob([bytes], { type: mimeType });
 };
 
 /**
@@ -45,7 +43,8 @@ export const downloadFile = (blob: Blob, filename: string) => {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // 立即 revoke 在部分浏览器（Safari/Firefox）会导致下载失败
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
 /**
@@ -56,7 +55,7 @@ export const formatFileSize = (bytes: number): string => {
   
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
   
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 };

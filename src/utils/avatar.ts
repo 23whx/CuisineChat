@@ -21,9 +21,20 @@ export const generateAvatar = (username: string): string => {
  * @param username 用户名
  * @returns Data URL
  */
+const avatarCache = new Map<string, string>();
+const AVATAR_CACHE_LIMIT = 200;
+
 export const getAvatarDataUrl = (username: string): string => {
+  // 生成 SVG 开销较大，而聊天列表里每条消息都会渲染头像，因此按用户名缓存
+  const cached = avatarCache.get(username);
+  if (cached) return cached;
+
   const svg = generateAvatar(username);
-  const base64 = btoa(unescape(encodeURIComponent(svg)));
-  return `data:image/svg+xml;base64,${base64}`;
+  const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  if (avatarCache.size >= AVATAR_CACHE_LIMIT) {
+    avatarCache.delete(avatarCache.keys().next().value as string);
+  }
+  avatarCache.set(username, url);
+  return url;
 };
 

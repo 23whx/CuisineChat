@@ -17,7 +17,10 @@
     "tips": "팁",
     "tip1": "임시 사용자 이름으로 랜덤 요리 이름이 할당됩니다",
     "tip2": "채팅 기록은 저장되지 않으며 페이지를 새로고침하면 사라집니다",
-    "tip3": "친구와 동일한 방 ID와 비밀번호를 사용하세요"
+    "tip3": "친구와 동일한 방 ID와 비밀번호를 사용하세요",
+    "noren": "요리수다",
+    "tagline": "오늘 밤의 자리는 암호를 아는 사람에게만",
+    "enter": "입장하기"
   },
   "room": {
     "online": "온라인",
@@ -34,7 +37,8 @@
     "settings": "설정",
     "emptyRoomTimeout": "{{minutes}}분 동안 다른 사람이 참가하지 않았습니다. 나가시겠습니까?",
     "roomEmpty": "현재 방에는 당신만 있습니다",
-    "waitingForOthers": "다른 사람의 참가를 기다리고 있습니다..."
+    "waitingForOthers": "다른 사람의 참가를 기다리고 있습니다...",
+    "open": "영업 중"
   },
   "audio": {
     "recording": "녹음 중...",
@@ -58,9 +62,6 @@
     "username": "사용자 이름",
     "usernamePlaceholder": "새 사용자 이름 입력",
     "changeUsername": "사용자 이름 변경",
-    "theme": "테마",
-    "light": "라이트",
-    "dark": "다크",
     "language": "언어",
     "chinese": "中文",
     "english": "English",
@@ -75,4 +76,3 @@
     "uploadFailed": "업로드 실패"
   }
 }
-

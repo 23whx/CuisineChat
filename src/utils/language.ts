@@ -3,13 +3,16 @@
  */
 export const detectLanguageByIP = async (): Promise<string> => {
   try {
-    // 使用免费的 IP 地理位置 API
+    // 使用免费的 IP 地理位置 API；首页会等待检测结果，必须设置超时
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 2500);
     const response = await fetch('https://ipapi.co/json/', {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
       },
-    });
+      signal: controller.signal,
+    }).finally(() => window.clearTimeout(timer));
 
     if (!response.ok) {
       throw new Error('Failed to fetch IP info');
@@ -61,23 +64,33 @@ export const detectLanguageByBrowser = (): string => {
   return 'en'; // 默认英文
 };
 
+const SUPPORTED_LANGUAGES = ['zh', 'en', 'ja', 'ko'] as const;
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
+
+export const isSupportedLanguage = (lang: unknown): lang is SupportedLanguage =>
+  typeof lang === 'string' && (SUPPORTED_LANGUAGES as readonly string[]).includes(lang);
+
+/**
+ * 同步读取用户保存过的语言（zustand persist 写入的 cuisine-chat-ui）
+ */
+export const getSavedLanguage = (): SupportedLanguage | null => {
+  try {
+    const saved = localStorage.getItem('cuisine-chat-ui');
+    const language = saved ? JSON.parse(saved)?.state?.language : null;
+    return isSupportedLanguage(language) ? language : null;
+  } catch {
+    return null;
+  }
+};
+
 /**
  * 获取或初始化语言设置
  */
 export const initializeLanguage = async (): Promise<string> => {
   // 检查本地存储是否有保存的语言设置
-  const savedLanguage = localStorage.getItem('cuisine-chat-ui');
-  
+  const savedLanguage = getSavedLanguage();
   if (savedLanguage) {
-    try {
-      const parsed = JSON.parse(savedLanguage);
-      if (parsed.state?.language) {
-        console.log('使用已保存的语言设置:', parsed.state.language);
-        return parsed.state.language;
-      }
-    } catch (error) {
-      console.error('解析保存的语言设置失败:', error);
-    }
+    return savedLanguage;
   }
 
   // 如果没有保存的设置，进行 IP 检测

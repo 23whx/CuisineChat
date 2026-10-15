@@ -1,0 +1,23 @@
+/* 共用的基礎設計變數。各方案在 .v-x 上覆寫這些值，形成自己的視覺語言。 */
+:root {
+  --bg: #f5f6f7;
+  --surface: #ffffff;
+  --ink: #16181a;
+  --muted: #6b7178;
+  --line: #e4e6e9;
+  --brand: #07c160;
+  --brand-ink: #ffffff;
+  --in-bg: #ffffff;
+  --in-ink: #16181a;
+  --out-bg: #07c160;
+  --out-ink: #ffffff;
+  --head-bg: #ffffff;
+  --head-ink: #16181a;
+  --chip-bg: #eef0f2;
+  --field-bg: #ffffff;
+  --radius: 12px;
+  --bubble-r: 16px;
+  --font: 'Noto Sans TC', system-ui, -apple-system, 'PingFang TC', sans-serif;
+  --display: var(--font);
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}

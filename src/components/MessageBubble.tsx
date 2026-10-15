@@ -9,8 +9,23 @@ interface MessageBubbleProps {
   isSent: boolean;
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSent }) => {
+const formatTime = (timestamp: number) => {
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+const formatDuration = (seconds: number) => {
+  const safe = Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
+  const mins = Math.floor(safe / 60);
+  const secs = Math.floor(safe % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+// 消息内容不可变，用 memo 避免每来一条新消息就重渲染整个列表
+export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, isSent }) => {
   const { t } = useTranslation();
+  // 氣泡內按鈕、進度條的底色：琥珀底上用深色、暗底上用淺色
+  const overlay = isSent ? 'bg-lantern-ink/10 hover:bg-lantern-ink/20' : 'bg-white/10 hover:bg-white/15';
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -20,30 +35,23 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSent })
       const blob = base64ToBlob(message.fileData, message.mimeType);
       downloadFile(blob, message.filename);
     } else if (message.type === MessageType.IMAGE && 'imageData' in message) {
-      const blob = base64ToBlob(message.imageData, 'image/png');
+      const blob = base64ToBlob(message.imageData, message.mimeType || 'image/png');
       downloadFile(blob, message.filename);
     }
   };
 
-  const formatTime = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   const togglePlayPause = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+    } else {
+      // play() 可能被拒绝（格式不支持、自动播放策略），失败时不要切换成播放状态
+      audio.play().then(
+        () => setIsPlaying(true),
+        (error) => console.error('Failed to play audio:', error)
+      );
     }
   };
 
@@ -66,7 +74,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSent })
   ) {
     return (
       <div className="flex justify-center my-2">
-        <div className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-3 py-1 rounded-full text-sm">
+        <div className="font-serif text-ink-soft text-xs px-3 py-1">
           {message.content}
         </div>
       </div>
@@ -78,9 +86,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSent })
       <Avatar username={message.senderName} size="sm" />
       
       <div className={`flex flex-col ${isSent ? 'items-end' : 'items-start'}`}>
-        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 px-2">
-          {message.senderName}
-        </div>
+        {/* 自己的消息不重複顯示名字 */}
+        {!isSent && (
+          <div className="text-xs text-ink-muted mb-1 px-2">
+            {message.senderName}
+          </div>
+        )}
         
         {/* 文本消息 */}
         {message.type === MessageType.TEXT && (
@@ -93,9 +104,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSent })
         {message.type === MessageType.IMAGE && 'imageData' in message && (
           <div className={`${isSent ? 'message-bubble-sent' : 'message-bubble-received'} p-1`}>
             <img
-              src={`data:image/png;base64,${message.imageData}`}
+              src={`data:${message.mimeType || 'image/png'};base64,${message.imageData}`}
               alt={message.filename}
               className="max-w-xs rounded-lg cursor-pointer"
+              loading="lazy"
+              decoding="async"
               onClick={handleDownload}
             />
             <div className="text-xs mt-1 opacity-75">{message.filename}</div>
@@ -119,7 +132,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSent })
             {'fileData' in message && message.fileData && (
               <button
                 onClick={handleDownload}
-                className="mt-2 w-full py-1 px-3 bg-white/20 hover:bg-white/30 rounded text-sm transition-colors"
+                className={`mt-2 w-full py-1 px-3 ${overlay} rounded-lg text-sm transition-colors`}
               >
                 {t('message.download')}
               </button>
@@ -133,7 +146,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSent })
             <div className="flex items-center gap-3 min-w-[200px]">
               <button
                 onClick={togglePlayPause}
-                className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors flex-shrink-0"
+                className={`w-10 h-10 rounded-full ${overlay} flex items-center justify-center transition-colors flex-shrink-0`}
               >
                 {isPlaying ? (
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -155,30 +168,32 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isSent })
                     {formatDuration(isPlaying ? currentTime : message.duration)}
                   </div>
                 </div>
-                <div className="mt-1 h-1 bg-white/20 rounded-full overflow-hidden">
+                <div className={`mt-1 h-1 rounded-full overflow-hidden ${isSent ? 'bg-lantern-ink/15' : 'bg-white/10'}`}>
                   <div 
-                    className="h-full bg-white/40 transition-all"
-                    style={{ width: `${(currentTime / message.duration) * 100}%` }}
+                    className={`h-full transition-all ${isSent ? 'bg-lantern-ink/50' : 'bg-lantern'}`}
+                    style={{ width: `${message.duration > 0 ? Math.min(100, (currentTime / message.duration) * 100) : 0}%` }}
                   />
                 </div>
               </div>
 
               <audio
                 ref={audioRef}
-                src={`data:audio/webm;base64,${message.audioData}`}
+                src={`data:${message.mimeType || 'audio/webm'};base64,${message.audioData}`}
                 onTimeUpdate={handleTimeUpdate}
                 onEnded={handleAudioEnded}
+                onPause={() => setIsPlaying(false)}
                 className="hidden"
               />
             </div>
           </div>
         )}
 
-        <div className="text-xs text-gray-400 mt-1 px-2">
+        <div className="text-[11px] text-ink-muted mt-1 px-2 tabular-nums">
           {formatTime(message.timestamp)}
         </div>
       </div>
     </div>
   );
-};
+});
 
+MessageBubble.displayName = 'MessageBubble';

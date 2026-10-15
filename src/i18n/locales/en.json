@@ -17,7 +17,10 @@
     "tips": "Tips",
     "tip1": "You will get a random cuisine name as your temporary username",
     "tip2": "Chat history is not saved and will disappear after page refresh",
-    "tip3": "Make sure to use the same room ID and password with your friends"
+    "tip3": "Make sure to use the same room ID and password with your friends",
+    "noren": "CHAT",
+    "tagline": "Tonight's seats are saved for those who know the code",
+    "enter": "Step inside"
   },
   "room": {
     "online": "Online",
@@ -34,7 +37,8 @@
     "settings": "Settings",
     "emptyRoomTimeout": "No one has joined the room for {{minutes}} minutes. Would you like to leave?",
     "roomEmpty": "You are currently alone in the room",
-    "waitingForOthers": "Waiting for others to join..."
+    "waitingForOthers": "Waiting for others to join...",
+    "open": "OPEN"
   },
   "audio": {
     "recording": "Recording...",
@@ -58,9 +62,6 @@
     "username": "Username",
     "usernamePlaceholder": "Enter new username",
     "changeUsername": "Change Username",
-    "theme": "Theme",
-    "light": "Light",
-    "dark": "Dark",
     "language": "Language",
     "chinese": "中文",
     "english": "English",
@@ -75,4 +76,3 @@
     "uploadFailed": "Upload Failed"
   }
 }
-

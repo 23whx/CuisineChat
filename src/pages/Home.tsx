@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useChatStore } from '@/store/chatStore';
 import { useUIStore } from '@/store/uiStore';
@@ -7,36 +7,41 @@ import { generateUserId, getRandomCuisineName } from '@/utils/username';
 import { getAvatarDataUrl } from '@/utils/avatar';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Footer } from '@/components/Footer';
-import { initializeLanguage } from '@/utils/language';
+import { PinInput } from '@/components/PinInput';
+import { getSavedLanguage, initializeLanguage, isSupportedLanguage } from '@/utils/language';
 
 export const Home: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { setCurrentUser, setRoom } = useChatStore();
-  const { setLanguage } = useUIStore();
+  const [searchParams] = useSearchParams();
+  const setCurrentUser = useChatStore((s) => s.setCurrentUser);
+  const setRoom = useChatStore((s) => s.setRoom);
+  const setLanguage = useUIStore((s) => s.setLanguage);
   
-  const [roomId, setRoomId] = useState('');
+  // 通过邀请链接进入时预填房间号
+  const [roomId, setRoomId] = useState(() => searchParams.get('room') ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isDetectingLanguage, setIsDetectingLanguage] = useState(true);
+  // 已保存过语言时无需等待，只有首次访问才需要进行（网络）检测
+  const [isDetectingLanguage, setIsDetectingLanguage] = useState(() => getSavedLanguage() === null);
 
-  // 初始化语言设置（基于 IP 检测）
   useEffect(() => {
-    const detectAndSetLanguage = async () => {
-      try {
-        const detectedLang = await initializeLanguage();
-        setLanguage(detectedLang as any);
+    if (!isDetectingLanguage) return;
+    let cancelled = false;
+    initializeLanguage()
+      .then((detectedLang) => {
+        if (cancelled || !isSupportedLanguage(detectedLang)) return;
+        setLanguage(detectedLang);
         i18n.changeLanguage(detectedLang);
-        console.log('语言已设置为:', detectedLang);
-      } catch (error) {
-        console.error('语言检测失败:', error);
-      } finally {
-        setIsDetectingLanguage(false);
-      }
+      })
+      .catch((error) => console.error('语言检测失败:', error))
+      .finally(() => {
+        if (!cancelled) setIsDetectingLanguage(false);
+      });
+    return () => {
+      cancelled = true;
     };
-
-    detectAndSetLanguage();
-  }, [setLanguage, i18n]);
+  }, [isDetectingLanguage, setLanguage, i18n]);
 
   const validatePassword = (pwd: string): boolean => {
     return /^\d{3}$/.test(pwd);
@@ -70,129 +75,124 @@ export const Home: React.FC = () => {
     });
 
     setRoom(roomId.trim(), password);
-    navigate(`/room/${roomId.trim()}`);
+    // 房間號是自由輸入的，含 / ? # 等字元時必須編碼，否則路由會被截斷
+    navigate(`/room/${encodeURIComponent(roomId.trim())}`);
   };
 
   const handleCreateRoom = () => {
-    const randomRoomId = `room_${Math.random().toString(36).substr(2, 9)}`;
+    const randomRoomId = `room_${Math.random().toString(36).slice(2, 11)}`;
     setRoomId(randomRoomId);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
       handleJoinRoom();
     }
   };
 
-  // 显示加载状态（可选）
+  const norenChars = Array.from(t('home.noren'));
+
   if (isDetectingLanguage) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-wechat-50 to-wechat-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-wechat-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center lantern-glow">
+        <div className="w-14 h-16 lantern-body shadow-lantern animate-pulse" aria-label="Loading" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-wechat-50 to-wechat-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="max-w-md w-full">
-        {/* 语言切换器 - 顶部右上角 */}
-        <div className="flex justify-end mb-4">
-          <LanguageSwitcher variant="compact" />
-        </div>
+    <div className="min-h-screen flex flex-col">
+      <main className="flex-1 flex justify-center lantern-glow">
+        <div className="w-full max-w-md px-5 pb-10 flex flex-col items-center text-center">
+          {/* 暖簾 */}
+          <div
+            className="w-full grid gap-1"
+            style={{ gridTemplateColumns: `repeat(${norenChars.length}, minmax(0, 1fr))` }}
+            aria-hidden="true"
+          >
+            {norenChars.map((char, i) => (
+              <span
+                key={i}
+                className="bg-noren-cloth border-t-[3px] border-noren rounded-b-md pt-5 pb-6 font-serif font-black text-xl text-ink"
+              >
+                {char}
+              </span>
+            ))}
+          </div>
 
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-wechat-600 dark:text-wechat-400 mb-2">
-            🍜 {t('app.title')}
-          </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300">
-            {t('app.subtitle')}
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            {t('home.description')}
-          </p>
-        </div>
+          <div className="w-full flex justify-end mt-4">
+            <LanguageSwitcher variant="compact" />
+          </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8">
-          <div className="space-y-4">
-            {/* 房间 ID */}
+          {/* 燈籠 */}
+          <div className="relative w-24 h-[120px] mt-4 mb-5 lantern-body shadow-lantern grid place-items-center font-serif font-black text-3xl text-noren-cloth">
+            <span className="absolute -top-1 left-[30%] right-[30%] h-2 rounded-sm bg-[#2a1712]" />
+            食
+            <span className="absolute -bottom-1 left-[30%] right-[30%] h-2 rounded-sm bg-[#2a1712]" />
+          </div>
+
+          <h1 className="font-serif font-bold text-[26px] tracking-[0.1em]">{t('app.title')}</h1>
+          <p className="text-ink-muted text-sm mt-2 mb-7 text-balance">{t('home.tagline')}</p>
+
+          <form
+            className="w-full flex flex-col gap-4 text-left"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleJoinRoom();
+            }}
+          >
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label htmlFor="room-id" className="block text-xs tracking-widest text-ink-muted mb-1.5">
                 {t('home.roomId')}
               </label>
               <div className="flex gap-2">
                 <input
+                  id="room-id"
                   type="text"
                   value={roomId}
                   onChange={(e) => setRoomId(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyDown}
                   placeholder={t('home.roomIdPlaceholder')}
-                  className="input-field flex-1"
+                  className="input-field flex-1 min-w-0 h-12"
+                  autoComplete="off"
                 />
-                <button
-                  onClick={handleCreateRoom}
-                  className="btn-wechat-outline whitespace-nowrap"
-                >
+                <button type="button" onClick={handleCreateRoom} className="btn-ghost whitespace-nowrap text-sm">
                   {t('home.create')}
                 </button>
               </div>
             </div>
 
-            {/* 密码 */}
             <div>
-              <label className="block text-sm font-medium mb-2">
-                {t('home.password')}
-              </label>
-              <input
-                type="text"
-                value={password}
-                onChange={(e) => setPassword(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                onKeyPress={handleKeyPress}
-                placeholder={t('home.passwordPlaceholder')}
-                className="input-field"
-                maxLength={3}
-                inputMode="numeric"
-              />
+              <span className="block text-xs tracking-widest text-ink-muted mb-1.5">
+                {t('home.password')} · {t('home.passwordPlaceholder')}
+              </span>
+              <PinInput value={password} onChange={setPassword} onSubmit={handleJoinRoom} label={t('home.password')} />
             </div>
 
-            {/* 错误提示 */}
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg text-sm">
+              <div role="alert" className="text-sm text-noren bg-noren/10 border border-noren/30 rounded-xl px-4 py-2">
                 {error}
               </div>
             )}
 
-            {/* 加入按钮 */}
-            <button
-              onClick={handleJoinRoom}
-              className="w-full btn-wechat text-lg py-3"
-            >
-              {t('home.join')}
+            <button type="submit" className="btn-lantern h-[52px] mt-2 text-base tracking-[0.1em] shadow-glow-lg">
+              {t('home.enter')}
             </button>
-          </div>
+          </form>
 
           {/* 提示 */}
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-              <p>💡 {t('home.tips')}:</p>
-              <ul className="list-disc list-inside space-y-1 ml-2">
-                <li>{t('home.tip1')}</li>
-                <li>{t('home.tip2')}</li>
-                <li>{t('home.tip3')}</li>
-              </ul>
-            </div>
-          </div>
+          <ul className="w-full mt-8 pt-5 border-t border-night-line text-left text-xs text-ink-muted space-y-2">
+            {['tip1', 'tip2', 'tip3'].map((key) => (
+              <li key={key} className="flex gap-2">
+                <span className="text-lantern">◆</span>
+                <span>{t(`home.${key}`)}</span>
+              </li>
+            ))}
+          </ul>
         </div>
+      </main>
 
-        {/* Footer */}
-        <div className="mt-8">
-          <Footer />
-        </div>
-      </div>
+      <Footer />
     </div>
   );
 };
-

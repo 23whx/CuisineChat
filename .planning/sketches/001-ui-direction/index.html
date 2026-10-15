@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CuisineChat UI 方向</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..800;1,9..144,400..800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&family=M+PLUS+Rounded+1c:wght@500;700;800&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700;900&display=swap">
+<style>
+/* ---------- 草圖外殼（與設計無關） ---------- */
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: #d9dbde; font-family: system-ui, sans-serif; padding-top: 108px; min-height: 100vh; }
+#variant-nav { position: fixed; inset: 0 0 auto 0; z-index: 9998; background: #111; color: #fff; padding: 10px 16px 8px; }
+#variant-nav .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.variant-tab { all: unset; cursor: pointer; padding: 7px 12px; border-radius: 8px; font-size: 13px; color: #bbb; background: #222; transition: all .15s ease; }
+.variant-tab:hover { color: #fff; background: #333; }
+.variant-tab.active { color: #111; background: #fff; font-weight: 600; }
+#variant-desc { font-size: 12.5px; color: #aaa; margin-top: 7px; min-height: 18px; }
+#sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-size: 12px; background: rgba(0,0,0,.75); color: #fff; padding: 8px 10px; border-radius: 10px; display: flex; gap: 6px; align-items: center; opacity: .55; transition: opacity .2s; }
+#sketch-tools:hover { opacity: 1; }
+#sketch-tools button { all: unset; cursor: pointer; padding: 4px 8px; border-radius: 6px; background: #333; }
+#sketch-tools button.on { background: #fff; color: #000; }
+.variant { display: none; }
+.variant.active { display: block; }
+.frames { display: flex; gap: 32px; justify-content: center; align-items: flex-start; padding: 12px 16px 64px; flex-wrap: wrap; }
+.frame-label { font: 600 12px system-ui; color: #555; text-align: center; margin-bottom: 8px; letter-spacing: .04em; }
+.screen { width: 390px; height: 800px; border-radius: 40px; overflow: hidden; position: relative; box-shadow: 0 30px 60px -20px rgba(0,0,0,.35), 0 0 0 10px #111; container-type: inline-size; container-name: screen; transition: box-shadow .3s; }
+.screen.flash { box-shadow: 0 30px 60px -20px rgba(0,0,0,.35), 0 0 0 10px #111, 0 0 0 16px #ffd84d; }
+body.m-desk .frames { padding: 0; gap: 0; }
+body.m-desk .frame-wrap { width: 100%; }
+body.m-desk .frame-label { display: none; }
+body.m-desk .screen { width: 100%; height: calc(100vh - 108px); border-radius: 0; box-shadow: none; }
+body.m-desk.s-home .frame-wrap.room-wrap, body.m-desk.s-room .frame-wrap.home-wrap { display: none; }
+
+/* ---------- 共用元件（全部由各方案的變數驅動） ---------- */
+.screen { background: var(--bg); color: var(--ink); font-family: var(--font); }
+.screen button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; transition: all .15s ease; }
+.screen input, .screen textarea { font: inherit; color: inherit; }
+.ic svg { width: 20px; height: 20px; display: block; }
+.home { height: 100%; overflow-y: auto; }
+.room { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; position: relative; }
+.room-head { display: flex; align-items: center; gap: 10px; padding: 50px 14px 12px; background: var(--head-bg); color: var(--head-ink); border-bottom: 1px solid var(--line); }
+.room-head .title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.room-head .rid { font-weight: 700; font-family: var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.room-head .online { font-size: 12px; opacity: .75; display: flex; align-items: center; gap: 5px; }
+.room-head .dot { width: 7px; height: 7px; border-radius: 50%; background: #34c759; }
+.room-head .actions { display: flex; gap: 2px; }
+.room-head .ic { padding: 8px; border-radius: 10px; }
+.room-head .ic:hover { background: rgba(127,127,127,.15); }
+.members { display: flex; gap: 6px; overflow-x: auto; padding: 8px 14px; border-bottom: 1px solid var(--line); background: var(--surface); scrollbar-width: none; }
+.chip { display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 999px; background: var(--chip-bg); font-size: 12.5px; white-space: nowrap; flex-shrink: 0; }
+.chip .you { opacity: .6; }
+.av { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 17px; background: var(--c, #eee); flex-shrink: 0; }
+.chip .av { width: 24px; height: 24px; font-size: 13px; }
+.thread { overflow-y: auto; padding: 18px max(14px, calc((100% - 760px) / 2)); display: flex; flex-direction: column; gap: 14px; }
+.msg { display: flex; gap: 8px; align-items: flex-start; max-width: 86%; animation: pop .22s ease-out; }
+@keyframes pop { from { opacity: 0; transform: translateY(6px); } }
+.msg.out { flex-direction: row-reverse; align-self: flex-end; }
+.msg .body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.msg.out .body { align-items: flex-end; }
+.msg .name { font-size: 11.5px; color: var(--muted); padding: 0 4px; }
+.msg.out .name { display: none; }
+.msg .time { font-size: 10.5px; color: var(--muted); padding: 0 4px; }
+.msg.sys { align-self: center; font-size: 12px; color: var(--muted); max-width: none; }
+.bubble { padding: 9px 13px; border-radius: var(--bubble-r); background: var(--in-bg); color: var(--in-ink); line-height: 1.55; font-size: 14.5px; word-break: break-word; }
+.out .bubble { background: var(--out-bg); color: var(--out-ink); }
+.bubble.img { padding: 4px; }
+.bubble.img .ph { width: 200px; height: 140px; border-radius: calc(var(--bubble-r) - 4px); display: grid; place-items: center; font-size: 13px; background: repeating-linear-gradient(45deg, rgba(127,127,127,.18) 0 10px, rgba(127,127,127,.08) 10px 20px); }
+.bubble.img .cap { font-size: 11.5px; opacity: .7; padding: 4px 6px 2px; }
+.bubble.audio { display: flex; align-items: center; gap: 10px; min-width: 190px; }
+.bubble.audio .play { width: 32px; height: 32px; border-radius: 50%; background: rgba(127,127,127,.2); display: grid; place-items: center; }
+.bubble.audio .play svg { width: 14px; height: 14px; }
+.wave { display: flex; gap: 2px; align-items: center; height: 22px; flex: 1; }
+.wave i { width: 3px; border-radius: 2px; background: currentColor; opacity: .55; height: var(--h); }
+.bubble.audio.playing .wave i { animation: wv .7s ease-in-out infinite alternate; animation-delay: calc(var(--h) * -20); }
+@keyframes wv { to { height: 4px; } }
+.bubble.audio .dur { font-size: 12px; opacity: .8; font-variant-numeric: tabular-nums; }
+.bubble.file { display: flex; align-items: center; gap: 10px; min-width: 220px; }
+.bubble.file .fi { width: 38px; height: 46px; border-radius: 6px; background: rgba(127,127,127,.2); display: grid; place-items: center; font-size: 10px; font-weight: 700; letter-spacing: .05em; }
+.bubble.file .meta { flex: 1; display: flex; flex-direction: column; }
+.bubble.file small { opacity: .7; font-size: 11.5px; }
+.bubble.file .dl { padding: 6px 10px; border-radius: 8px; background: rgba(127,127,127,.18); font-size: 12px; }
+.typing .bubble { display: flex; gap: 4px; padding: 12px 14px; }
+.typing .bubble i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .4; animation: tp 1s infinite; }
+.typing .bubble i:nth-child(2) { animation-delay: .15s; } .typing .bubble i:nth-child(3) { animation-delay: .3s; }
+@keyframes tp { 50% { opacity: 1; transform: translateY(-2px); } }
+.composer { display: flex; gap: 8px; align-items: flex-end; padding: 10px 12px 26px; border-top: 1px solid var(--line); background: var(--surface); }
+.composer .tools { display: flex; }
+.composer .tools .ic { padding: 9px 7px; border-radius: 10px; color: var(--muted); }
+.composer .tools .ic:hover { color: var(--ink); background: rgba(127,127,127,.12); }
+.composer textarea { flex: 1; resize: none; height: 40px; max-height: 120px; padding: 9px 12px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--field-bg); outline: none; line-height: 1.4; font-size: 14.5px; }
+.composer textarea:focus { border-color: var(--brand); }
+.composer .send { height: 40px; padding: 0 16px; border-radius: var(--radius); background: var(--brand); color: var(--brand-ink); font-weight: 600; white-space: nowrap; }
+.composer .send:hover { filter: brightness(1.08); }
+.composer .send:active { transform: scale(.96); }
+.toast { position: absolute; left: 50%; bottom: 96px; transform: translate(-50%, 10px); background: rgba(20,20,20,.88); color: #fff; padding: 8px 14px; border-radius: 999px; font: 500 13px system-ui; opacity: 0; pointer-events: none; transition: all .2s ease; z-index: 5; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.pin { display: flex; gap: 10px; }
+.pin input { width: 52px; height: 58px; text-align: center; font-size: 24px; font-weight: 700; outline: none; transition: all .15s ease; }
+.err { font-size: 12.5px; color: #e5484d; min-height: 18px; }
+.shake { animation: shake .35s; }
+@keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+/* 寬螢幕：部分方案把成員列表變成側欄 */
+@container screen (min-width: 760px) {
+  .side .room { grid-template-columns: 240px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
+  .side .room-head { grid-column: 1 / -1; padding-top: 14px; }
+  .side .members { grid-row: 2 / 4; flex-direction: column; overflow-y: auto; border-bottom: 0; border-right: 1px solid var(--line); padding: 14px; gap: 4px; }
+  .side .members::before { content: '在座 · 3'; font-size: 11px; letter-spacing: .08em; color: var(--muted); padding: 2px 6px 8px; }
+  .side .chip { background: none; padding: 6px; border-radius: 10px; font-size: 14px; }
+  .side .chip:hover { background: var(--chip-bg); }
+  .side .chip .av { width: 32px; height: 32px; font-size: 17px; }
+  .room-head { padding-top: 14px; }
+  .composer { padding-bottom: 12px; padding-inline: max(12px, calc((100% - 784px) / 2)); }
+  .msg { max-width: 70%; }
+}
+
+/* =========================================================
+   A 清爽綠：沿用現有微信綠，整理層級與細節（改動成本最低）
+   ========================================================= */
+.v-a { --bg: #f2f3f5; --ink: #191919; --muted: #8a8f99; --line: #e6e7ea; --brand: #07c160; --in-bg: #fff; --out-bg: #95ec69; --out-ink: #191919; --head-bg: #ededed; --chip-bg: #f2f3f5; --radius: 10px; --bubble-r: 8px; }
+.v-a .msg.sys { background: #dadcdf; color: #fff; padding: 3px 10px; border-radius: 6px; font-size: 11.5px; }
+.v-a .av { border-radius: 6px; }
+.v-a .chip .av { border-radius: 50%; }
+.v-a .composer { background: #f7f7f7; }
+.v-a .composer .send { background: #07c160; color: #fff; }
+.v-a .home { padding: 64px 22px 30px; display: flex; flex-direction: column; gap: 22px; }
+.v-a .lang { align-self: flex-end; display: flex; gap: 4px; background: #e6e7ea; padding: 3px; border-radius: 9px; }
+.v-a .lang button { padding: 4px 10px; border-radius: 7px; font-size: 12px; color: #555; }
+.v-a .lang button.on { background: #fff; color: #111; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.v-a .hero { text-align: center; }
+.v-a .logo { width: 72px; height: 72px; margin: 0 auto 14px; border-radius: 20px; background: #07c160; display: grid; place-items: center; font-size: 38px; box-shadow: 0 10px 24px -8px rgba(7,193,96,.6); }
+.v-a h1 { margin: 0; font-size: 26px; }
+.v-a .hero p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+.v-a .card { background: #fff; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+.v-a label { font-size: 13px; color: #555; font-weight: 500; }
+.v-a .row { display: flex; gap: 8px; }
+.v-a .row input { flex: 1; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid #e3e4e7; border-radius: 10px; outline: none; background: #f7f8fa; }
+.v-a .row input:focus, .v-a .pin input:focus { border-color: #07c160; background: #fff; box-shadow: 0 0 0 3px rgba(7,193,96,.15); }
+.v-a .row button { padding: 0 14px; border-radius: 10px; color: #07c160; background: #e8f8ef; font-weight: 600; font-size: 13.5px; }
+.v-a .pin input { border: 1px solid #e3e4e7; border-radius: 10px; background: #f7f8fa; }
+.v-a .primary { height: 48px; border-radius: 10px; background: #07c160 !important; color: #fff !important; font-weight: 600; font-size: 16px; margin-top: 4px; }
+.v-a .primary:hover { background: #06ad56 !important; }
+.v-a .tips { margin: 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
+.v-a .tips li::before { content: '✓  '; color: #07c160; font-weight: 700; }
+
+/* =========================================================
+   B 美食雜誌：奶油紙、襯線大標、陶土紅
+   ========================================================= */
+.v-b { --bg: #f4ede1; --surface: #f4ede1; --ink: #2a1f17; --muted: #8b7966; --line: #ddd0bc; --brand: #c4532f; --brand-ink: #fff8ef; --in-bg: #fffaf2; --in-ink: #2a1f17; --out-bg: #c4532f; --out-ink: #fff8ef; --head-bg: #f4ede1; --chip-bg: #ebe1d1; --field-bg: #fffaf2; --radius: 2px; --bubble-r: 3px; --font: 'Noto Sans TC', sans-serif; --display: 'Fraunces', 'Noto Serif TC', serif; }
+.v-b .room-head { border-bottom: 2px solid var(--ink); }
+.v-b .room-head .rid { font-size: 21px; font-style: italic; font-weight: 600; }
+.v-b .room-head .online { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.v-b .bubble { box-shadow: 0 1px 0 var(--line); border: 1px solid var(--line); }
+.v-b .out .bubble { border-color: transparent; }
+.v-b .msg .name { font-family: 'Fraunces', serif; font-style: italic; font-size: 13px; color: var(--ink); }
+.v-b .msg.sys { font-family: 'Fraunces', serif; font-style: italic; display: flex; gap: 10px; align-items: center; }
+.v-b .msg.sys::before, .v-b .msg.sys::after { content: ''; width: 40px; height: 1px; background: var(--line); }
+.v-b .composer { border-top: 2px solid var(--ink); }
+.v-b .composer textarea { border: 0; border-bottom: 1px solid var(--ink); background: transparent; }
+.v-b .composer .send { font-family: 'Fraunces', serif; font-style: italic; font-size: 16px; }
+.v-b .home { padding: 54px 26px 30px; display: flex; flex-direction: column; }
+.v-b .mast { display: flex; justify-content: space-between; font-size: 10.5px; letter-spacing: .16em; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--ink); padding: 6px 0; }
+.v-b h1 { font-family: 'Fraunces', 'Noto Serif TC', serif; font-weight: 700; font-size: 50px; line-height: 1.02; margin: 28px 0 14px; letter-spacing: -.02em; }
+.v-b h1 em { color: var(--brand); font-weight: 500; }
+.v-b .dek { font-family: 'Noto Serif TC', serif; font-size: 15px; line-height: 1.7; color: #4b3c30; margin: 0 0 26px; }
+.v-b .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 18px; }
+.v-b .field span { font-size: 10.5px; letter-spacing: .16em; color: var(--muted); }
+.v-b .field .line { display: flex; align-items: flex-end; gap: 10px; }
+.v-b .field input { flex: 1; min-width: 0; border: 0; border-bottom: 1.5px solid var(--ink); background: transparent; font-family: 'Fraunces', serif; font-size: 24px; padding: 4px 0; outline: none; }
+.v-b .field input:focus { border-color: var(--brand); }
+.v-b .field .link { font-size: 12px; color: var(--brand); text-decoration: underline; text-underline-offset: 3px; padding-bottom: 8px; }
+.v-b .pin input { width: 46px; height: 54px; border: 0; border-bottom: 1.5px solid var(--ink); background: transparent; font-family: 'Fraunces', serif; font-size: 30px; }
+.v-b .pin input:focus { border-color: var(--brand); }
+.v-b .primary { margin-top: 6px; height: 54px; background: var(--ink) !important; color: #f4ede1 !important; font-family: 'Fraunces', serif; font-style: italic; font-size: 20px; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; }
+.v-b .primary:hover { background: var(--brand) !important; }
+.v-b .byline { margin-top: auto; padding-top: 22px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); }
+.v-b .byline i { font-family: 'Fraunces', serif; color: var(--ink); }
+
+/* =========================================================
+   C 深夜食堂：暗色、燈籠琥珀、暖紅
+   ========================================================= */
+.v-c { --bg: #15110e; --surface: #1d1814; --ink: #f3e7d6; --muted: #9c8b78; --line: #2e2620; --brand: #f2a541; --brand-ink: #1a120a; --in-bg: #2a221c; --in-ink: #f3e7d6; --out-bg: #f2a541; --out-ink: #1d1209; --head-bg: #1d1814; --head-ink: #f3e7d6; --chip-bg: #2a221c; --field-bg: #231c17; --radius: 12px; --bubble-r: 18px; --display: 'Noto Serif TC', serif; }
+.v-c .room-head { background: linear-gradient(#24120f, #1d1814); border-bottom: 1px solid #3a2a20; }
+.v-c .room-head::after { content: '營業中'; font-family: 'Noto Serif TC', serif; font-size: 11px; color: #d64933; border: 1px solid #d64933; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
+.v-c .room-head .dot { background: #f2a541; box-shadow: 0 0 8px #f2a541; }
+.v-c .out .bubble { box-shadow: 0 6px 22px -8px rgba(242,165,65,.55); }
+.v-c .msg.sys { font-family: 'Noto Serif TC', serif; color: #c9a77c; }
+.v-c .composer .send { box-shadow: 0 0 18px -4px rgba(242,165,65,.7); }
+.v-c .home { padding: 0 0 30px; display: flex; flex-direction: column; align-items: center; text-align: center; background: radial-gradient(circle at 50% 30%, rgba(242,165,65,.18), transparent 55%); }
+.v-c .noren { width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 44px 18px 0; }
+.v-c .noren span { background: #3b1a16; color: #f3e7d6; font-family: 'Noto Serif TC', serif; font-weight: 900; font-size: 20px; padding: 14px 0 22px; border-radius: 0 0 6px 6px; border-top: 3px solid #d64933; }
+.v-c .lantern { width: 96px; height: 120px; margin: 30px 0 18px; border-radius: 46% / 40%; background: radial-gradient(circle at 50% 45%, #ffcf7a, #f2a541 45%, #c2541f); box-shadow: 0 0 60px rgba(242,165,65,.55); display: grid; place-items: center; font-family: 'Noto Serif TC', serif; font-weight: 900; font-size: 30px; color: #3b1a16; position: relative; }
+.v-c .lantern::before, .v-c .lantern::after { content: ''; position: absolute; left: 30%; right: 30%; height: 8px; background: #2a1712; border-radius: 3px; }
+.v-c .lantern::before { top: -4px; } .v-c .lantern::after { bottom: -4px; }
+.v-c h1 { font-family: 'Noto Serif TC', serif; font-size: 26px; margin: 0; letter-spacing: .1em; }
+.v-c .sub { color: var(--muted); font-size: 13.5px; margin: 8px 0 24px; }
+.v-c .form { width: calc(100% - 44px); display: flex; flex-direction: column; gap: 14px; text-align: left; }
+.v-c label { font-size: 12px; color: var(--muted); letter-spacing: .1em; }
+.v-c .row { display: flex; gap: 8px; margin-top: 6px; }
+.v-c .row input { flex: 1; min-width: 0; height: 46px; padding: 0 14px; border-radius: 12px; border: 1px solid #3a2e25; background: #231c17; outline: none; }
+.v-c .row button { padding: 0 14px; border-radius: 12px; border: 1px solid #3a2e25 !important; color: var(--brand); font-size: 13px; }
+.v-c .pin { margin-top: 6px; justify-content: space-between; }
+.v-c .pin input { flex: 1; border-radius: 12px; border: 1px solid #3a2e25; background: #231c17; color: #f2a541; }
+.v-c .row input:focus, .v-c .pin input:focus { border-color: #f2a541; box-shadow: 0 0 0 3px rgba(242,165,65,.18), 0 0 20px -6px #f2a541; }
+.v-c .primary { height: 52px; border-radius: 14px; background: linear-gradient(#f7b85b, #e2902a) !important; color: #2a1407 !important; font-weight: 700; font-size: 16px; letter-spacing: .1em; box-shadow: 0 10px 30px -10px rgba(242,165,65,.8); }
+
+/* =========================================================
+   D 便當盒：粗黑描邊、偏移陰影、粉彩色塊、圓體
+   ========================================================= */
+.v-d { --bg: #fff4dc; --surface: #fff4dc; --ink: #1b1b1b; --muted: #6d6250; --line: #1b1b1b; --brand: #ff6b4a; --brand-ink: #1b1b1b; --in-bg: #fff; --out-bg: #9bd27a; --out-ink: #1b1b1b; --head-bg: #ffd84d; --chip-bg: #fff; --field-bg: #fff; --radius: 14px; --bubble-r: 16px; --font: 'M PLUS Rounded 1c', 'Noto Sans TC', sans-serif; --display: 'M PLUS Rounded 1c', sans-serif; }
+.v-d .room-head { border-bottom: 2.5px solid #1b1b1b; }
+.v-d .room-head .rid { font-weight: 800; font-size: 18px; }
+.v-d .room-head .ic { border: 2px solid #1b1b1b; background: #fff; box-shadow: 2px 2px 0 #1b1b1b; padding: 6px; }
+.v-d .room-head .ic:active { transform: translate(2px,2px); box-shadow: none; }
+.v-d .members { border-bottom: 2.5px solid #1b1b1b; }
+.v-d .chip { border: 2px solid #1b1b1b; font-weight: 700; }
+.v-d .av { border: 2px solid #1b1b1b; }
+.v-d .bubble { border: 2.5px solid #1b1b1b; box-shadow: 3px 3px 0 #1b1b1b; font-weight: 500; }
+.v-d .msg.sys { background: #8ecbff; border: 2px solid #1b1b1b; padding: 2px 10px; border-radius: 999px; color: #1b1b1b; font-weight: 700; transform: rotate(-1.5deg); }
+.v-d .composer { border-top: 2.5px solid #1b1b1b; }
+.v-d .composer textarea { border: 2.5px solid #1b1b1b; }
+.v-d .composer .send { border: 2.5px solid #1b1b1b; box-shadow: 3px 3px 0 #1b1b1b; font-weight: 800; }
+.v-d .composer .send:active { transform: translate(3px,3px); box-shadow: none; }
+.v-d .home { padding: 52px 14px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: start; }
+.v-d .tile { border: 2.5px solid #1b1b1b; border-radius: 18px; box-shadow: 4px 4px 0 #1b1b1b; padding: 14px; background: #fff; }
+.v-d .t-title { grid-column: 1 / -1; background: #ff6b4a; min-height: 150px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
+.v-d .t-title h1 { margin: 0; font-size: 34px; font-weight: 800; line-height: 1; }
+.v-d .t-title p { margin: 0; font-weight: 700; font-size: 14px; max-width: 70%; }
+.v-d .t-title .big { position: absolute; right: -6px; bottom: -14px; font-size: 92px; transform: rotate(-12deg); }
+.v-d .t-label { font-size: 12px; font-weight: 800; margin-bottom: 8px; display: block; }
+.v-d .t-room { grid-column: 1 / -1; background: #fff; }
+.v-d .t-room .row { display: flex; gap: 8px; }
+.v-d .t-room input { flex: 1; min-width: 0; height: 44px; border: 2.5px solid #1b1b1b; border-radius: 12px; padding: 0 12px; outline: none; font-weight: 700; }
+.v-d .t-room button { border: 2.5px solid #1b1b1b !important; border-radius: 12px; background: #ffd84d; font-weight: 800; padding: 0 12px; box-shadow: 2px 2px 0 #1b1b1b; }
+.v-d .t-pin { background: #9bd27a; grid-column: 1 / -1; }
+.v-d .pin input { border: 2.5px solid #1b1b1b; border-radius: 12px; background: #fff; flex: 1; font-weight: 800; }
+.v-d input:focus { background: #fffbe8 !important; box-shadow: 0 0 0 3px #ffd84d; }
+.v-d .t-me { background: #ffd84d; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; }
+.v-d .t-me .av { width: 54px; height: 54px; font-size: 28px; background: #fff; }
+.v-d .t-me b { font-size: 15px; } .v-d .t-me small { font-size: 11px; font-weight: 700; }
+.v-d .t-join { background: #1b1b1b !important; color: #fff4dc !important; font-weight: 800; font-size: 20px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 4px; text-align: left; }
+.v-d .t-join:active { transform: translate(4px,4px); box-shadow: none; }
+.v-d .t-join small { font-size: 11px; opacity: .7; font-weight: 700; }
+.v-d .t-tips { grid-column: 1 / -1; background: #8ecbff; font-size: 12.5px; font-weight: 700; line-height: 1.7; }
+.v-d .err { grid-column: 1 / -1; min-height: 0; }
+
+/* =========================================================
+   E 點菜單：票據紙、等寬字、印章紅、聊天像日誌
+   ========================================================= */
+.v-e { --bg: #e7e3da; --surface: #fbfaf6; --ink: #111; --muted: #77736a; --line: #111; --brand: #111; --brand-ink: #fbfaf6; --in-bg: transparent; --out-bg: transparent; --out-ink: #111; --head-bg: #fbfaf6; --chip-bg: transparent; --field-bg: #fbfaf6; --radius: 0; --bubble-r: 0; --font: 'JetBrains Mono', 'Noto Sans TC', monospace; --display: 'JetBrains Mono', monospace; }
+.v-e .room { background: #fbfaf6; }
+.v-e .room-head { border-bottom: 1px dashed #111; }
+.v-e .room-head .rid { text-transform: uppercase; font-size: 15px; }
+.v-e .room-head .rid::before { content: 'TABLE '; color: var(--muted); font-weight: 400; }
+.v-e .room-head .dot { border-radius: 0; background: #d7261e; }
+.v-e .members { border-bottom: 1px dashed #111; font-size: 12px; }
+.v-e .chip { padding: 0 8px 0 0; text-transform: uppercase; }
+.v-e .chip .av { display: none; }
+.v-e .chip::before { content: '■'; color: #d7261e; }
+.v-e .thread { gap: 4px; font-size: 13px; }
+.v-e .msg, .v-e .msg.out { max-width: 100%; align-self: stretch; flex-direction: row; animation: none; }
+.v-e .msg .av { display: none; }
+.v-e .msg .body, .v-e .msg.out .body { flex-direction: row; align-items: baseline; gap: 8px; flex-wrap: wrap; width: 100%; }
+.v-e .msg .time { order: -1; padding: 0; color: var(--muted); }
+.v-e .msg .name, .v-e .msg.out .name { display: inline; padding: 0; color: #111; font-weight: 700; text-transform: uppercase; font-size: 13px; }
+.v-e .msg .name::after { content: ':'; }
+.v-e .msg.out .name { color: #d7261e; }
+.v-e .bubble { padding: 0; font-size: 13.5px; flex: 1 1 60%; min-width: 0; }
+.v-e .bubble.img, .v-e .bubble.audio, .v-e .bubble.file { border: 1px solid #111; padding: 8px; margin: 4px 0; flex-basis: 100%; min-width: 0; }
+.v-e .bubble.img .ph { border-radius: 0; }
+.v-e .bubble.audio .play, .v-e .bubble.file .fi, .v-e .bubble.file .dl { border-radius: 0; border: 1px solid #111; background: none; }
+.v-e .msg.sys { align-self: stretch; text-align: center; color: var(--muted); font-size: 11.5px; padding: 6px 0; border-top: 1px dashed #bbb; border-bottom: 1px dashed #bbb; margin: 6px 0; text-transform: uppercase; }
+.v-e .composer { border-top: 1px dashed #111; background: #fbfaf6; }
+.v-e .composer textarea { border: 0; border-bottom: 1px solid #111; padding-left: 0; }
+.v-e .composer textarea::placeholder { color: #999; }
+.v-e .composer .send { text-transform: uppercase; letter-spacing: .1em; }
+.v-e .home { padding: 50px 20px 30px; display: flex; justify-content: center; align-items: flex-start; }
+.v-e .ticket { width: 100%; background: #fbfaf6; padding: 26px 22px 22px; position: relative; font-size: 13px; filter: drop-shadow(0 12px 18px rgba(0,0,0,.12)); --zz: radial-gradient(circle at 8px 0, transparent 7px, #fbfaf6 7.5px); }
+.v-e .ticket::after { content: ''; position: absolute; left: 0; right: 0; bottom: -8px; height: 8px; background: var(--zz); background-size: 16px 8px; }
+.v-e .ticket .c { text-align: center; }
+.v-e .ticket h1 { font-size: 20px; letter-spacing: .25em; margin: 0; }
+.v-e .ticket .hr { border-top: 1px dashed #111; margin: 14px 0; }
+.v-e .ticket .kv { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+.v-e .ticket .kv > span { width: 64px; color: var(--muted); }
+.v-e .ticket .kv input { flex: 1; min-width: 0; border: 0; border-bottom: 1px solid #111; background: transparent; outline: none; font-size: 15px; padding: 4px 0; text-transform: uppercase; }
+.v-e .ticket .kv button { font-size: 11px; border: 1px solid #111 !important; padding: 4px 6px; }
+.v-e .pin { gap: 8px; }
+.v-e .pin input { width: 40px; height: 44px; border: 1px solid #111; background: transparent; font-size: 20px; }
+.v-e .pin input:focus, .v-e .ticket .kv input:focus { background: #fff3a8; }
+.v-e .item { display: flex; justify-content: space-between; gap: 8px; }
+.v-e .item span:nth-child(2) { flex: 1; border-bottom: 1px dotted #999; transform: translateY(-4px); }
+.v-e .primary { width: 100%; margin-top: 16px; height: 50px; background: #111 !important; color: #fbfaf6 !important; letter-spacing: .3em; font-size: 15px; }
+.v-e .primary:hover { background: #d7261e !important; }
+.v-e .stamp { position: absolute; right: 18px; top: 58px; border: 2.5px solid #d7261e; color: #d7261e; padding: 4px 8px; font-weight: 700; font-size: 12px; transform: rotate(10deg); opacity: .85; letter-spacing: .1em; }
+.v-e .barcode { height: 36px; margin-top: 16px; background: repeating-linear-gradient(90deg, #111 0 2px, transparent 2px 4px, #111 4px 5px, transparent 5px 8px, #111 8px 11px, transparent 11px 12px); }
+
+/* =========================================================
+   F 霧玻璃：漸層光暈、毛玻璃面板、iMessage 藍
+   ========================================================= */
+.v-f { --bg: #f4f1fb; --surface: rgba(255,255,255,.55); --ink: #14141f; --muted: #6f6c85; --line: rgba(255,255,255,.7); --brand: #0a84ff; --brand-ink: #fff; --in-bg: rgba(255,255,255,.8); --out-bg: #0a84ff; --out-ink: #fff; --head-bg: rgba(255,255,255,.5); --chip-bg: rgba(255,255,255,.65); --field-bg: rgba(255,255,255,.75); --radius: 20px; --bubble-r: 20px; --font: 'Inter', 'Noto Sans TC', sans-serif; --display: 'Inter', 'Noto Sans TC', sans-serif; }
+.v-f .screen { background: radial-gradient(circle at 15% 10%, #ffd6c2 0, transparent 40%), radial-gradient(circle at 90% 30%, #d9c8ff 0, transparent 45%), radial-gradient(circle at 30% 95%, #bfe3ff 0, transparent 45%), #f4f1fb; }
+.v-f .room { grid-template-rows: auto minmax(0, 1fr) auto; }
+.v-f .room-head { position: absolute; left: 10px; right: 10px; top: 46px; z-index: 2; border-radius: 22px; padding: 8px 10px; border: 1px solid rgba(255,255,255,.8); backdrop-filter: blur(20px) saturate(1.6); -webkit-backdrop-filter: blur(20px) saturate(1.6); box-shadow: 0 8px 30px -12px rgba(60,40,120,.25); }
+.v-f .room-head .rid { font-size: 15.5px; letter-spacing: -.01em; }
+.v-f .members { display: none; }
+.v-f .thread { grid-row: 1 / 3; padding-top: 120px; padding-bottom: 100px; }
+.v-f .bubble { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 2px 10px -4px rgba(60,40,120,.15); }
+.v-f .msg.sys { background: rgba(255,255,255,.6); padding: 4px 12px; border-radius: 999px; }
+.v-f .composer { position: absolute; left: 10px; right: 10px; bottom: 22px; border-radius: 26px; padding: 6px; border: 1px solid rgba(255,255,255,.8); backdrop-filter: blur(20px) saturate(1.6); -webkit-backdrop-filter: blur(20px) saturate(1.6); box-shadow: 0 8px 30px -12px rgba(60,40,120,.3); align-items: center; }
+.v-f .composer textarea { border: 0; background: transparent; }
+.v-f .composer .send { width: 40px; padding: 0; border-radius: 50%; font-size: 0; display: grid; place-items: center; }
+.v-f .composer .send::before { content: '↑'; font-size: 20px; font-weight: 700; }
+.v-f .toast { bottom: 110px; }
+.v-f .faces { display: flex; }
+.v-f .faces .av { width: 26px; height: 26px; font-size: 14px; border: 2px solid #fff; margin-left: -8px; }
+.v-f .home { padding: 60px 20px 30px; display: flex; flex-direction: column; justify-content: center; gap: 18px; }
+.v-f .glass { background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.85); border-radius: 30px; padding: 26px 22px; backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6); box-shadow: 0 20px 50px -20px rgba(60,40,120,.35); display: flex; flex-direction: column; gap: 14px; }
+.v-f .appicon { width: 64px; height: 64px; border-radius: 18px; background: linear-gradient(135deg, #ff9a6b, #a07bff); display: grid; place-items: center; font-size: 34px; box-shadow: 0 10px 24px -10px rgba(160,123,255,.8); }
+.v-f h1 { margin: 0; font-size: 28px; letter-spacing: -.03em; font-weight: 700; }
+.v-f .sub { margin: -8px 0 4px; color: var(--muted); font-size: 14px; }
+.v-f .field { background: rgba(255,255,255,.75); border-radius: 16px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+.v-f .field span { font-size: 11.5px; color: var(--muted); font-weight: 500; }
+.v-f .field .line { display: flex; align-items: center; gap: 8px; }
+.v-f .field input { border: 0; background: transparent; outline: none; font-size: 17px; font-weight: 500; flex: 1; min-width: 0; padding: 0; }
+.v-f .field .shuffle { color: #0a84ff; font-size: 13px; font-weight: 600; }
+.v-f .pin { justify-content: center; gap: 14px; }
+.v-f .pin input { width: 60px; height: 68px; border-radius: 18px; border: 0; background: rgba(255,255,255,.75); font-size: 30px; font-weight: 600; }
+.v-f .pin input:focus { box-shadow: 0 0 0 3px rgba(10,132,255,.35); background: #fff; }
+.v-f .primary { height: 52px; border-radius: 999px; background: #0a84ff !important; color: #fff !important; font-weight: 600; font-size: 16.5px; box-shadow: 0 10px 24px -10px rgba(10,132,255,.8); }
+.v-f .seg { align-self: center; display: flex; gap: 2px; background: rgba(255,255,255,.5); border-radius: 999px; padding: 3px; font-size: 12.5px; }
+.v-f .seg button { padding: 5px 12px; border-radius: 999px; color: var(--muted); }
+.v-f .seg button.on { background: #fff; color: #14141f; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+@container screen (min-width: 760px) {
+  .v-f .room-head { left: 50%; transform: translateX(-50%); width: min(760px, calc(100% - 40px)); top: 16px; }
+  .v-f .composer { left: 50%; transform: translateX(-50%); width: min(760px, calc(100% - 40px)); padding: 6px; }
+  .v-f .thread { padding-top: 96px; }
+}
+</style>
+</head>
+<body class="m-phone s-home">
+
+<div id="variant-nav">
+  <div class="tabs" id="tabs"></div>
+  <div id="variant-desc"></div>
+</div>
+
+<div id="stage"></div>
+
+<div id="sketch-tools">
+  <button data-mode="phone" class="on">手機 · 並排</button>
+  <button data-mode="desk-home">桌面 · 首頁</button>
+  <button data-mode="desk-room">桌面 · 聊天室</button>
+</div>
+
+<script>
+const ICON = {
+  img: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>',
+  clip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m21 11-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7"/></svg>',
+  mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+  share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1"/><path d="M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></svg>',
+  gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>',
+};
+
+const PEOPLE = {
+  Ramen: { e: '🍜', c: '#ffe2c6' },
+  Xiaolongbao: { e: '🥟', c: '#e3f1d4' },
+  Tiramisu: { e: '🍰', c: '#f3dcf0' },
+};
+const ME = 'Ramen';
+const av = (n) => `<div class="av" style="--c:${PEOPLE[n].c}">${PEOPLE[n].e}</div>`;
+const waveBars = () => Array.from({ length: 22 }, (_, i) => `<i style="--h:${6 + Math.round(Math.abs(Math.sin(i * 1.7)) * 16)}px"></i>`).join('');
+
+function msgHtml(m) {
+  if (m.type === 'sys') return `<div class="msg sys">${m.text}</div>`;
+  const dir = m.from === ME ? 'out' : 'in';
+  let bubble = '';
+  if (m.type === 'text') bubble = `<div class="bubble">${m.text}</div>`;
+  if (m.type === 'img') bubble = `<div class="bubble img"><div class="ph">🧾 ${m.name}</div><div class="cap">${m.name}</div></div>`;
+  if (m.type === 'audio') bubble = `<div class="bubble audio"><button class="play" data-act="play">${ICON.play}</button><div class="wave">${waveBars()}</div><span class="dur">${m.dur}</span></div>`;
+  if (m.type === 'file') bubble = `<div class="bubble file"><div class="fi">PDF</div><div class="meta"><b>${m.name}</b><small>${m.size}</small></div><button class="dl" data-act="dl">下載</button></div>`;
+  if (m.type === 'typing') bubble = `<div class="bubble"><i></i><i></i><i></i></div>`;
+  return `<div class="msg ${dir}${m.type === 'typing' ? ' typing' : ''}">${av(m.from)}<div class="body"><div class="name">${m.from}</div>${bubble}${m.type === 'typing' ? '' : `<div class="time">${m.time}</div>`}</div></div>`;
+}
+
+const THREAD = [
+  { type: 'sys', text: 'Xiaolongbao 加入了聊天' },
+  { type: 'text', from: 'Xiaolongbao', time: '20:31', text: '今晚八點開火鍋？我把菜單拍上來 👇' },
+  { type: 'img', from: 'Xiaolongbao', time: '20:31', name: '菜單.jpg' },
+  { type: 'sys', text: 'Tiramisu 加入了聊天' },
+  { type: 'text', from: ME, time: '20:33', text: '好！我負責帶甜點，順便買兩盒肥牛' },
+  { type: 'audio', from: 'Tiramisu', time: '20:34', dur: '0:12' },
+  { type: 'file', from: ME, time: '20:36', name: '購物清單.pdf', size: '1.2 MB' },
+];
+
+function roomHtml() {
+  return `<div class="room">
+    <header class="room-head">
+      <button class="ic" data-act="leave" title="離開">${ICON.back}</button>
+      <div class="title"><span class="rid">friday-hotpot</span><span class="online"><i class="dot"></i>3 人在線</span></div>
+      <div class="faces-slot"></div>
+      <div class="actions"><button class="ic" data-act="copy" title="複製邀請鏈接">${ICON.share}</button><button class="ic" data-act="settings" title="設定">${ICON.gear}</button></div>
+    </header>
+    <aside class="members">
+      ${Object.keys(PEOPLE).map((n) => `<div class="chip">${av(n)}<span>${n}${n === ME ? ' <span class="you">（你）</span>' : ''}</span></div>`).join('')}
+    </aside>
+    <main class="thread">${THREAD.map(msgHtml).join('')}</main>
+    <footer class="composer">
+      <div class="tools"><button class="ic" data-act="tool" title="圖片">${ICON.img}</button><button class="ic" data-act="tool" title="文件">${ICON.clip}</button><button class="ic" data-act="tool" title="語音">${ICON.mic}</button></div>
+      <textarea rows="1" placeholder="說點什麼…"></textarea>
+      <button class="send" data-act="send">發送</button>
+    </footer>
+    <div class="toast"></div>
+  </div>`;
+}
+
+const pin = () => `<div class="pin">${'<input inputmode="numeric" maxlength="1" data-pin>'.repeat(3)}</div>`;
+
+const VARIANTS = [
+  {
+    id: 'a', label: 'A 清爽綠', side: false,
+    desc: '沿用現有微信綠，只整理層級：分段式密碼框、語言切換、乾淨的卡片。改動成本最低，最「像聊天軟件」。',
+    home: () => `<div class="home">
+      <div class="lang"><button class="on">中</button><button>EN</button><button>日</button><button>한</button></div>
+      <div class="hero"><div class="logo">🍜</div><h1>CuisineChat</h1><p>臨時、點對點的聊天室，關掉頁面就消失</p></div>
+      <div class="card">
+        <label>房間號</label>
+        <div class="row"><input data-room value="friday-hotpot"><button data-act="create">隨機</button></div>
+        <label>3 位數密碼</label>${pin()}
+        <div class="err"></div>
+        <button class="primary" data-act="join">加入房間</button>
+      </div>
+      <ul class="tips"><li>進房後隨機獲得一個美食暱稱</li><li>聊天紀錄不儲存，刷新即消失</li><li>和朋友使用相同的房間號與密碼</li></ul>
+    </div>`,
+  },
+  {
+    id: 'b', label: 'B 美食雜誌', side: true,
+    desc: '奶油紙色 + 襯線大標 + 陶土紅。像一本美食雜誌的扉頁，強調「約飯」的情境感。寬螢幕下成員變成側欄。',
+    home: () => `<div class="home">
+      <div class="mast"><span>NO. 042</span><span>CUISINECHAT</span><span>AUTUMN</span></div>
+      <h1>今晚，<em>和誰</em>一起吃？</h1>
+      <p class="dek">輸入同一個房間號與三位數密碼，朋友就能在這裡碰面。不留紀錄，散席即散。</p>
+      <div class="field"><span>房間 · TABLE</span><div class="line"><input data-room value="friday-hotpot"><button class="link" data-act="create">換一桌</button></div></div>
+      <div class="field"><span>密碼 · 3 DIGITS</span>${pin()}</div>
+      <div class="err"></div>
+      <button class="primary" data-act="join"><span>入座</span><span>→</span></button>
+      <div class="byline">你將以隨機料理名入座，例如 <i>Xiaolongbao</i> 或 <i>Tiramisu</i>。</div>
+    </div>`,
+  },
+  {
+    id: 'c', label: 'C 深夜食堂 ★ Selected', side: false,
+    desc: '暗色為主，燈籠琥珀色 + 暖紅暖簾。私密、夜晚、熟人小聚的氣氛；暗色下圖片和語音更突出。',
+    home: () => `<div class="home">
+      <div class="noren"><span>料</span><span>理</span><span>閒</span><span>聊</span></div>
+      <div class="lantern">食</div>
+      <h1>CuisineChat</h1>
+      <p class="sub">今晚的座位，只留給知道暗號的人</p>
+      <div class="form">
+        <div><label>房間號</label><div class="row"><input data-room value="friday-hotpot"><button data-act="create">隨機</button></div></div>
+        <div><label>暗號 · 三位數</label>${pin()}</div>
+        <div class="err"></div>
+        <button class="primary" data-act="join">掀簾入座</button>
+      </div>
+    </div>`,
+  },
+  {
+    id: 'd', label: 'D 便當盒', side: false,
+    desc: '粗黑描邊 + 偏移陰影 + 粉彩色塊 + 圓體字。活潑、有玩心，首頁是一格格「便當」。按下去有實體按壓感。',
+    home: () => `<div class="home">
+      <div class="tile t-title"><h1>Cuisine<br>Chat</h1><p>開個房，叫上朋友，邊吃邊聊！</p><span class="big">🍱</span></div>
+      <div class="tile t-room"><span class="t-label">① 房間號</span><div class="row"><input data-room value="friday-hotpot"><button data-act="create">🎲</button></div></div>
+      <div class="tile t-pin"><span class="t-label">② 三位數密碼</span>${pin()}</div>
+      <div class="tile t-me">${av(ME)}<b>${ME}</b><small>你今天的名字</small></div>
+      <button class="tile t-join" data-act="join">開飯！<small>加入房間 →</small></button>
+      <div class="err"></div>
+      <div class="tile t-tips">🍙 不存紀錄，刷新即消失<br>🍙 同房號 + 同密碼 = 同一桌</div>
+    </div>`,
+  },
+  {
+    id: 'e', label: 'E 點菜單', side: false,
+    desc: '票據紙 + 等寬字 + 印章紅。首頁是一張點菜單，聊天像出單日誌，資訊密度最高、最有個性。',
+    home: () => `<div class="home"><div class="ticket">
+      <div class="c"><h1>CUISINECHAT</h1><div style="margin-top:4px;color:#77736a">臨時點對點聊天 · 不留底</div></div>
+      <div class="stamp">P2P</div>
+      <div class="hr"></div>
+      <div class="kv"><span>TABLE</span><input data-room value="friday-hotpot"><button data-act="create">隨機</button></div>
+      <div class="kv"><span>PIN</span>${pin()}</div>
+      <div class="hr"></div>
+      <div class="item"><span>1× 隨機料理暱稱</span><span></span><span>FREE</span></div>
+      <div class="item"><span>1× 點對點直連</span><span></span><span>FREE</span></div>
+      <div class="item"><span>0× 聊天紀錄</span><span></span><span>—</span></div>
+      <div class="err" style="margin-top:8px"></div>
+      <button class="primary" data-act="join">下單入座</button>
+      <div class="barcode"></div>
+    </div></div>`,
+  },
+  {
+    id: 'f', label: 'F 霧玻璃', side: false,
+    desc: '柔和漸層光暈 + 毛玻璃浮動面板 + iMessage 藍。最「現代 App」，標題列與輸入框懸浮，內容區最大。',
+    home: () => `<div class="home">
+      <div class="seg"><button class="on">中文</button><button>EN</button><button>日本語</button><button>한국어</button></div>
+      <div class="glass">
+        <div class="appicon">🍜</div>
+        <h1>加入房間</h1>
+        <p class="sub">點對點直連，關掉頁面就不留痕跡。</p>
+        <div class="field"><span>房間號</span><div class="line"><input data-room value="friday-hotpot"><button class="shuffle" data-act="create">隨機</button></div></div>
+        ${pin()}
+        <div class="err" style="text-align:center"></div>
+        <button class="primary" data-act="join">加入</button>
+      </div>
+    </div>`,
+  },
+];
+
+const stage = document.getElementById('stage');
+const tabs = document.getElementById('tabs');
+stage.innerHTML = VARIANTS.map((v) => `
+  <section class="variant v-${v.id}${v.side ? ' side' : ''}" id="variant-${v.id}">
+    <div class="frames">
+      <div class="frame-wrap home-wrap"><div class="frame-label">首頁</div><div class="screen">${v.home()}</div></div>
+      <div class="frame-wrap room-wrap"><div class="frame-label">聊天室</div><div class="screen">${roomHtml()}</div></div>
+    </div>
+  </section>`).join('');
+tabs.innerHTML = VARIANTS.map((v) => `<button class="variant-tab" data-v="${v.id}">${v.label}</button>`).join('');
+
+// F 方案在標題列顯示疊在一起的頭像
+document.querySelectorAll('.v-f .faces-slot').forEach((el) => { el.className = 'faces'; el.innerHTML = Object.keys(PEOPLE).map(av).join(''); });
+
+function showVariant(id) {
+  document.querySelectorAll('.variant').forEach((s) => s.classList.toggle('active', s.id === 'variant-' + id));
+  document.querySelectorAll('.variant-tab').forEach((t) => t.classList.toggle('active', t.dataset.v === id));
+  document.getElementById('variant-desc').textContent = VARIANTS.find((v) => v.id === id).desc;
+  history.replaceState(null, '', '#' + id);
+  scrollThreads();
+}
+function setMode(mode) {
+  document.body.classList.toggle('m-phone', mode === 'phone');
+  document.body.classList.toggle('m-desk', mode !== 'phone');
+  document.body.classList.toggle('s-home', mode === 'desk-home');
+  document.body.classList.toggle('s-room', mode === 'desk-room');
+  document.querySelectorAll('#sketch-tools button').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
+  scrollThreads();
+}
+function scrollThreads() { requestAnimationFrame(() => document.querySelectorAll('.thread').forEach((t) => (t.scrollTop = t.scrollHeight))); }
+
+tabs.addEventListener('click', (e) => { const b = e.target.closest('.variant-tab'); if (b) showVariant(b.dataset.v); });
+document.getElementById('sketch-tools').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setMode(b.dataset.mode); });
+
+function toast(scope, text) {
+  const t = scope.closest('.variant').querySelector('.toast');
+  t.textContent = text; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1600);
+}
+const now = () => new Date().toTimeString().slice(0, 5);
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function send(room) {
+  const ta = room.querySelector('textarea');
+  const text = ta.value.trim();
+  if (!text) { ta.focus(); return; }
+  const thread = room.querySelector('.thread');
+  thread.insertAdjacentHTML('beforeend', msgHtml({ type: 'text', from: ME, time: now(), text: esc(text) }));
+  ta.value = '';
+  thread.scrollTop = thread.scrollHeight;
+  if (room._replied) return;
+  room._replied = true;
+  setTimeout(() => {
+    thread.insertAdjacentHTML('beforeend', msgHtml({ type: 'typing', from: 'Tiramisu' }));
+    thread.scrollTop = thread.scrollHeight;
+    setTimeout(() => {
+      thread.querySelector('.typing')?.remove();
+      thread.insertAdjacentHTML('beforeend', msgHtml({ type: 'text', from: 'Tiramisu', time: now(), text: '收到！我八點前到 🙌' }));
+      thread.scrollTop = thread.scrollHeight;
+    }, 1300);
+  }, 500);
+}
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const act = btn.dataset.act;
+  const screen = btn.closest('.screen');
+  if (act === 'create') {
+    screen.querySelector('[data-room]').value = 'room_' + Math.random().toString(36).slice(2, 8);
+  } else if (act === 'join') {
+    const room = screen.querySelector('[data-room]').value.trim();
+    const code = [...screen.querySelectorAll('[data-pin]')].map((i) => i.value).join('');
+    const err = screen.querySelector('.err');
+    if (!room || !/^\d{3}$/.test(code)) {
+      err.textContent = !room ? '請輸入房間號' : '密碼需為 3 位數字';
+      const box = screen.querySelector('.pin'); box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+      return;
+    }
+    err.textContent = '';
+    const variant = screen.closest('.variant');
+    variant.querySelectorAll('.rid').forEach((r) => (r.textContent = room));
+    if (document.body.classList.contains('m-desk')) setMode('desk-room');
+    else { const rs = variant.querySelector('.room-wrap .screen'); rs.classList.add('flash'); setTimeout(() => rs.classList.remove('flash'), 700); }
+    toast(variant, '已入座 ' + room);
+  } else if (act === 'send') send(btn.closest('.room'));
+  else if (act === 'copy') toast(btn, '邀請鏈接已複製');
+  else if (act === 'settings') toast(btn, '設定面板（草圖未繪製）');
+  else if (act === 'tool') toast(btn, '選擇' + btn.title + '…');
+  else if (act === 'dl') toast(btn, '開始下載 購物清單.pdf');
+  else if (act === 'leave') { if (document.body.classList.contains('m-desk')) setMode('desk-home'); else toast(btn, '離開房間 → 回到首頁'); }
+  else if (act === 'play') {
+    const b = btn.closest('.bubble'); const on = b.classList.toggle('playing');
+    btn.innerHTML = on ? ICON.pause : ICON.play;
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.matches('.composer textarea') && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(e.target.closest('.room')); }
+  if (e.target.matches('[data-pin]') && e.key === 'Backspace' && !e.target.value) e.target.previousElementSibling?.focus();
+  if (e.target.matches('[data-pin], [data-room]') && e.key === 'Enter') e.target.closest('.screen').querySelector('[data-act="join"]').click();
+});
+document.addEventListener('input', (e) => {
+  if (!e.target.matches('[data-pin]')) return;
+  e.target.value = e.target.value.replace(/\D/g, '').slice(-1);
+  if (e.target.value) e.target.nextElementSibling?.focus();
+});
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.lang button, .seg button');
+  if (b) b.parentElement.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+});
+
+showVariant((location.hash.slice(1) && VARIANTS.some((v) => v.id === location.hash.slice(1))) ? location.hash.slice(1) : 'c');
+</script>
+</body>
+</html>

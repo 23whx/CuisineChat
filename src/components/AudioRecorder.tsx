@@ -15,6 +15,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSend, onCancel }
     recordingTime,
     audioBlob,
     audioUrl,
+    error,
     startRecording,
     stopRecording,
     pauseRecording,
@@ -44,25 +45,25 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSend, onCancel }
     return () => {
       cancelRecording();
     };
-  }, []);
+  }, [startRecording, cancelRecording]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+    <div className="modal-backdrop">
+      <div role="dialog" aria-modal="true" className="modal-panel max-w-md p-6">
         <div className="text-center">
           {/* 录音状态 */}
           <div className="mb-6">
             {isRecording && !audioBlob && (
               <div className="flex flex-col items-center">
-                <div className={`w-20 h-20 rounded-full bg-red-500 flex items-center justify-center mb-4 ${!isPaused ? 'animate-pulse' : ''}`}>
-                  <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <div className={`w-20 h-20 rounded-full bg-noren shadow-[0_0_40px_-6px_#d64933] flex items-center justify-center mb-4 ${!isPaused ? 'animate-pulse' : ''}`}>
+                  <svg className="w-10 h-10 text-ink" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
                   </svg>
                 </div>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                <div className="font-serif text-3xl font-bold mb-2 tabular-nums">
                   {formatTime(recordingTime)}
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
+                <div className="text-sm text-ink-muted">
                   {isPaused ? t('audio.paused') : t('audio.recording')}
                 </div>
               </div>
@@ -70,12 +71,12 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSend, onCancel }
 
             {audioBlob && audioUrl && (
               <div className="flex flex-col items-center">
-                <div className="w-20 h-20 rounded-full bg-wechat-500 flex items-center justify-center mb-4">
-                  <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <div className="w-20 h-20 rounded-full bg-lantern text-lantern-ink shadow-lantern flex items-center justify-center mb-4">
+                  <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                   </svg>
                 </div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                <div className="font-serif text-2xl font-bold mb-4 tabular-nums">
                   {formatTime(recordingTime)}
                 </div>
                 <audio src={audioUrl} controls className="w-full mb-4" />
@@ -83,13 +84,30 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSend, onCancel }
             )}
           </div>
 
+          {/* 麦克风不可用 / 正在生成录音 */}
+          {!isRecording && !audioBlob && (
+            <div className="mb-6 text-sm text-ink-muted">
+              {error ?? '…'}
+            </div>
+          )}
+
           {/* 控制按钮 */}
           <div className="flex justify-center gap-3">
+            {/* 未在录音时也必须能关闭弹窗，否则拒绝麦克风权限后会被卡住 */}
+            {!isRecording && !audioBlob && (
+              <button
+                onClick={handleCancel}
+                className="btn-ghost px-5 py-2.5 text-ink-muted"
+              >
+                {t('audio.cancel')}
+              </button>
+            )}
+
             {isRecording && !audioBlob && (
               <>
                 <button
                   onClick={handleCancel}
-                  className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  className="btn-ghost px-5 py-2.5 text-ink-muted"
                 >
                   {t('audio.cancel')}
                 </button>
@@ -97,14 +115,14 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSend, onCancel }
                 {!isPaused ? (
                   <button
                     onClick={pauseRecording}
-                    className="px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+                    className="btn-ghost px-5 py-2.5"
                   >
                     {t('audio.pause')}
                   </button>
                 ) : (
                   <button
                     onClick={resumeRecording}
-                    className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    className="btn-ghost px-5 py-2.5"
                   >
                     {t('audio.resume')}
                   </button>
@@ -112,7 +130,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSend, onCancel }
 
                 <button
                   onClick={stopRecording}
-                  className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                  className="px-5 py-2.5 rounded-xl bg-noren text-ink font-bold transition-all hover:brightness-110 active:scale-[0.97]"
                 >
                   {t('audio.stop')}
                 </button>
@@ -123,13 +141,13 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSend, onCancel }
               <>
                 <button
                   onClick={handleCancel}
-                  className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  className="btn-ghost px-5 py-2.5 text-ink-muted"
                 >
                   {t('audio.cancel')}
                 </button>
                 <button
                   onClick={handleSend}
-                  className="px-6 py-3 btn-wechat"
+                  className="btn-lantern px-6 py-2.5"
                 >
                   {t('audio.send')}
                 </button>

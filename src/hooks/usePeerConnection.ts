@@ -2,162 +2,270 @@ import { useEffect, useRef, useCallback } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { createPeer } from '@/libs/peerConfig';
 import { RoomSignalingManager } from '@/libs/roomSignaling';
+import { watchConnection } from '@/libs/heartbeat';
 import { useChatStore } from '@/store/chatStore';
-import { DataChannelMessage, DataChannelMessageType, Message, MessageType } from '@/types';
+import { ConnectionStatus, DataChannelMessage, DataChannelMessageType, Message, MessageType } from '@/types';
+
+const CONNECT_TIMEOUT = 10000;
+const MAX_RETRIES = 3;
+const MESSAGE_TYPES = new Set<string>(Object.values(MessageType));
+
+/**
+ * 对端数据不可信：只接受结构完整的消息
+ */
+const isValidMessage = (payload: unknown): payload is Message => {
+  const m = payload as Partial<Message> | null;
+  return (
+    !!m &&
+    typeof m.id === 'string' &&
+    typeof m.senderId === 'string' &&
+    typeof m.senderName === 'string' &&
+    typeof m.timestamp === 'number' &&
+    typeof m.type === 'string' &&
+    MESSAGE_TYPES.has(m.type)
+  );
+};
 
 /**
  * WebRTC Peer 连接管理 Hook
  */
 export const usePeerConnection = (roomId: string, password: string, userId: string, username: string, avatarSeed: string) => {
-  const peerRef = useRef<Peer | null>(null);
   const connectionsRef = useRef<Map<string, DataConnection>>(new Map());
-  const signalingRef = useRef<RoomSignalingManager | null>(null);
   const userInfoRef = useRef({ userId, username, avatarSeed });
-  const retryCountRef = useRef<Map<string, number>>(new Map());
-  const pendingConnectRef = useRef<Set<string>>(new Set());
-  
-  // 更新 user info ref
-  useEffect(() => {
-    userInfoRef.current = { userId, username, avatarSeed };
-  }, [userId, username, avatarSeed]);
-  
-  const { addMessage, addPeer, removePeer, updateConnectionStatus, currentUser } = useChatStore();
 
   // 发送数据到所有连接的 peer
   const broadcast = useCallback((message: DataChannelMessage) => {
-    console.log('[聊天] 广播消息到所有连接，类型 =', message.type);
     connectionsRef.current.forEach((conn, pid) => {
-      if (conn.open) {
-        try {
-          console.log('[聊天] -> 发送到', pid);
-          conn.send(message);
-        } catch (error) {
-          console.error('[聊天] 发送失败：', pid, error);
-        }
-      } else {
-        console.warn('[聊天] 连接未打开，跳过：', pid);
+      if (!conn.open) return;
+      try {
+        conn.send(message);
+      } catch (error) {
+        console.error('[聊天] 发送失败：', pid, error);
       }
     });
   }, []);
 
-  // 处理接收到的数据
-  const handleData = useCallback((data: any, peerId: string) => {
-    try {
-      const message = data as DataChannelMessage;
-      
-      switch (message.type) {
-        case DataChannelMessageType.USER_INFO:
-          // 处理用户信息
-          addPeer(peerId, message.payload);
-          break;
-          
-        case DataChannelMessageType.MESSAGE:
-          // 处理聊天消息
-          console.log('[聊天] 收到来自', peerId, '的消息');
-          addMessage(message.payload as Message);
-          break;
-          
-        case DataChannelMessageType.PING:
-          // 响应 ping
-          const conn = connectionsRef.current.get(peerId);
-          if (conn?.open) {
-            conn.send({ type: DataChannelMessageType.PONG, payload: {} });
-          }
-          break;
-          
-        case DataChannelMessageType.PONG:
-          // 收到 pong 响应
-          updateConnectionStatus(peerId, 'connected');
-          break;
-      }
-    } catch (error) {
-      console.error('Failed to handle data:', error);
-    }
-  }, [addMessage, addPeer, updateConnectionStatus]);
+  // 用户信息变化（例如在设置中改名）时同步给所有成员
+  useEffect(() => {
+    userInfoRef.current = { userId, username, avatarSeed };
+    broadcast({
+      type: DataChannelMessageType.USER_INFO,
+      payload: { id: userId, username, avatarSeed },
+    });
+  }, [userId, username, avatarSeed, broadcast]);
 
-  // 设置连接事件监听
-  const setupConnection = useCallback((conn: DataConnection) => {
-    const peerId = conn.peer;
-    
-    conn.on('open', () => {
-      console.log('[聊天] 与对等方连接已打开：', peerId);
-      connectionsRef.current.set(peerId, conn);
-      updateConnectionStatus(peerId, 'connected');
-      
-      // 发送自己的用户信息
-      const { userId: uid, username: uname, avatarSeed: seed } = userInfoRef.current;
+  // 初始化 Peer 和房间信令
+  useEffect(() => {
+    // 刷新页面后房间密码会丢失，此时页面马上会跳回首页，不要创建无用的连接
+    if (!roomId || !password || !userId) return;
+
+    let disposed = false;
+    const { upsertPeer, removePeer, addMessage, updateConnectionStatus } = useChatStore.getState();
+    const peer: Peer = createPeer();
+    const connections = new Map<string, DataConnection>();
+    connectionsRef.current = connections;
+    const pending = new Map<string, { conn: DataConnection; timer: number }>();
+    const retries = new Map<string, number>();
+    const outgoing = new WeakSet<DataConnection>();
+    const retryTimers = new Set<number>();
+    let signaling: RoomSignalingManager | null = null;
+
+    const sendUserInfo = (conn: DataConnection) => {
+      const { userId: id, username: name, avatarSeed: seed } = userInfoRef.current;
       conn.send({
         type: DataChannelMessageType.USER_INFO,
-        payload: { id: uid, username: uname, avatarSeed: seed },
+        payload: { id, username: name, avatarSeed: seed },
+      } satisfies DataChannelMessage);
+    };
+
+    const handleData = (data: unknown, remoteId: string) => {
+      const message = data as DataChannelMessage | null;
+      if (!message || typeof message !== 'object') return;
+
+      switch (message.type) {
+        case DataChannelMessageType.USER_INFO: {
+          const info = message.payload;
+          if (info && typeof info.id === 'string' && typeof info.username === 'string') {
+            const name = info.username.slice(0, 30);
+            upsertPeer(remoteId, {
+              id: info.id,
+              username: name,
+              avatarSeed: typeof info.avatarSeed === 'string' ? info.avatarSeed : name,
+            });
+          }
+          break;
+        }
+
+        case DataChannelMessageType.MESSAGE: {
+          const payload = message.payload;
+          // 自己的消息不会经由他人转发，冒用本人 ID 的消息直接丢弃
+          if (isValidMessage(payload) && payload.senderId !== userInfoRef.current.userId) {
+            addMessage(payload);
+          }
+          break;
+        }
+
+        case DataChannelMessageType.PONG:
+          updateConnectionStatus(remoteId, ConnectionStatus.CONNECTED);
+          break;
+      }
+    };
+
+    /** 取消等待中的连接，返回它是否确实处于等待状态 */
+    const clearPending = (remoteId: string, conn: DataConnection): boolean => {
+      const entry = pending.get(remoteId);
+      if (!entry || entry.conn !== conn) return false;
+      window.clearTimeout(entry.timer);
+      pending.delete(remoteId);
+      return true;
+    };
+
+    const scheduleRetry = (remoteId: string) => {
+      if (disposed || connections.has(remoteId)) return;
+      const attempt = retries.get(remoteId) ?? 0;
+      if (attempt >= MAX_RETRIES) {
+        console.error('[聊天] 重试次数已达上限，放弃连接：', remoteId);
+        retries.delete(remoteId);
+        return;
+      }
+      retries.set(remoteId, attempt + 1);
+      const delay = 1000 * 2 ** attempt;
+      console.warn(`[聊天] 第 ${attempt + 1} 次重试，延迟 ${delay}ms：`, remoteId);
+      const timer = window.setTimeout(() => {
+        retryTimers.delete(timer);
+        connectToPeer(remoteId);
+      }, delay);
+      retryTimers.add(timer);
+    };
+
+    // 设置连接事件监听
+    const setupConnection = (conn: DataConnection) => {
+      const remoteId = conn.peer;
+
+      conn.on('open', () => {
+        clearPending(remoteId, conn);
+        if (disposed) {
+          conn.close();
+          return;
+        }
+
+        const existing = connections.get(remoteId);
+        if (existing && existing !== conn && existing.open) {
+          // 双方同时发起连接时，两端都保留由 ID 较小一方发起的那条，保证结果一致
+          const initiator = outgoing.has(conn) ? peer.id : remoteId;
+          const preferred = peer.id < remoteId ? peer.id : remoteId;
+          if (initiator !== preferred) {
+            conn.close();
+            return;
+          }
+          connections.set(remoteId, conn);
+          existing.close();
+        } else {
+          connections.set(remoteId, conn);
+        }
+
+        console.log('[聊天] 与对等方连接已打开：', remoteId);
+        retries.delete(remoteId);
+        watchConnection(conn); // PING/PONG 由心跳模块处理
+        sendUserInfo(conn);
       });
 
-      // 清理重试状态
-      retryCountRef.current.delete(peerId);
-      pendingConnectRef.current.delete(peerId);
-    });
+      conn.on('data', (data) => handleData(data, remoteId));
 
-    conn.on('data', (data) => {
-      handleData(data, peerId);
-    });
-
-    conn.on('close', () => {
-      console.log('[聊天] 与对等方连接已关闭：', peerId);
-      connectionsRef.current.delete(peerId);
-      removePeer(peerId);
-    });
-
-    conn.on('error', (error) => {
-      console.error('[聊天] 与对等方连接错误：', peerId, error);
-      updateConnectionStatus(peerId, 'failed');
-
-      // 对等方暂不可用时，进行有限次数的重试
-      const errType: any = (error as any)?.type;
-      if (errType === 'peer-unavailable' || errType === 'network' || errType === 'socket-error') {
-        const prev = retryCountRef.current.get(peerId) ?? 0;
-        if (prev < 3) {
-          const next = prev + 1;
-          retryCountRef.current.set(peerId, next);
-          const delay = 1000 * Math.pow(2, prev);
-          console.warn(`[聊天] 对等方暂不可用，准备第 ${next} 次重试，延迟 ${delay}ms ：`, peerId);
-          setTimeout(() => {
-            // 仅当尚未建立连接时重试
-            if (!connectionsRef.current.has(peerId)) {
-              pendingConnectRef.current.delete(peerId);
-              connectToPeer(peerId);
-            }
-          }, delay);
-        } else {
-          console.error('[聊天] 重试次数已达上限，放弃连接：', peerId);
-          pendingConnectRef.current.delete(peerId);
+      conn.on('close', () => {
+        // 尚未打开就被关闭（如 ICE 协商失败）时重试
+        if (clearPending(remoteId, conn)) {
+          scheduleRetry(remoteId);
+          return;
         }
-      }
-    });
-  }, [handleData, removePeer, updateConnectionStatus]);
+        // 只有当前使用的连接关闭才算对方离开（被替换掉的重复连接不算）
+        if (connections.get(remoteId) === conn) {
+          console.log('[聊天] 与对等方连接已关闭：', remoteId);
+          connections.delete(remoteId);
+          removePeer(remoteId);
+          signaling?.forgetPeer(remoteId);
+        }
+      });
 
-  // 连接到其他 peer
-  const connectToPeer = useCallback((targetPeerId: string) => {
-    if (!peerRef.current) return;
-    
-    // 避免重复连接
-    if (connectionsRef.current.has(targetPeerId)) {
-      console.log('Already connected to:', targetPeerId);
-      return;
-    }
-    if (pendingConnectRef.current.has(targetPeerId)) {
-      console.log('[聊天] 已在连接进行中，跳过：', targetPeerId);
-      return;
+      conn.on('error', (error) => {
+        console.error('[聊天] 与对等方连接错误：', remoteId, error);
+      });
+    };
+
+    // 连接到其他 peer
+    function connectToPeer(remoteId: string) {
+      if (disposed || remoteId === peer.id || connections.has(remoteId) || pending.has(remoteId)) return;
+
+      console.log('[聊天] 尝试连接到对等方：', remoteId);
+      const conn = peer.connect(remoteId, { reliable: true });
+      outgoing.add(conn);
+
+      // 对方不存在时 PeerJS 只在 Peer 上报 peer-unavailable，连接本身不会报错也不会关闭，
+      // 因此用超时兜底，避免该成员永远卡在 "连接中"
+      const timer = window.setTimeout(() => {
+        if (clearPending(remoteId, conn)) {
+          conn.close();
+          scheduleRetry(remoteId);
+        }
+      }, CONNECT_TIMEOUT);
+      pending.set(remoteId, { conn, timer });
+
+      setupConnection(conn);
     }
 
-    console.log('[聊天] 尝试连接到对等方：', targetPeerId);
-    updateConnectionStatus(targetPeerId, 'connecting');
-    
-    const conn = peerRef.current.connect(targetPeerId, {
-      reliable: true,
+    peer.on('error', (error) => {
+      if (error.type !== 'peer-unavailable') return;
+      // 错误信息形如 "Could not connect to peer <id>"
+      pending.forEach(({ conn }, remoteId) => {
+        if (error.message.includes(remoteId) && clearPending(remoteId, conn)) {
+          conn.close();
+          scheduleRetry(remoteId);
+        }
+      });
     });
-    pendingConnectRef.current.add(targetPeerId);
-    
-    setupConnection(conn);
-  }, [setupConnection, updateConnectionStatus]);
+
+    peer.on('open', (id) => {
+      if (disposed || signaling) return; // 断线重连后也会再次触发 open
+      console.log('[聊天] 我的 PeerID =', id);
+
+      signaling = new RoomSignalingManager(
+        peer,
+        roomId,
+        password,
+        (discoveredPeerId) => {
+          retries.delete(discoveredPeerId);
+          connectToPeer(discoveredPeerId);
+        },
+        () => Array.from(connections.keys())
+      );
+      signaling.start().catch((error) => console.error('[聊天] 房间信令启动失败：', error));
+    });
+
+    peer.on('connection', (conn) => {
+      console.log('[聊天] 收到来自对等方的连接：', conn.peer);
+      setupConnection(conn);
+    });
+
+    // 关闭/刷新标签页时立即断开，让其他成员马上感知到离开，而不是等心跳超时
+    const handlePageHide = () => peer.destroy();
+    window.addEventListener('pagehide', handlePageHide);
+
+    // 清理函数
+    return () => {
+      disposed = true;
+      window.removeEventListener('pagehide', handlePageHide);
+      signaling?.stop();
+      retryTimers.forEach((t) => window.clearTimeout(t));
+      pending.forEach(({ conn, timer }) => {
+        window.clearTimeout(timer);
+        conn.close();
+      });
+      pending.clear();
+      connections.forEach((conn) => conn.close());
+      connections.clear();
+      peer.destroy();
+    };
+  }, [roomId, password, userId]);
 
   // 发送消息
   const sendMessage = useCallback((message: Message) => {
@@ -165,87 +273,13 @@ export const usePeerConnection = (roomId: string, password: string, userId: stri
       type: DataChannelMessageType.MESSAGE,
       payload: message,
     });
-    
+
     // 也添加到本地
-    addMessage(message);
-  }, [broadcast, addMessage]);
-
-  // 初始化 Peer 和房间信令
-  useEffect(() => {
-    let mounted = true;
-    
-    const initPeerAndSignaling = async () => {
-      // 创建一个随机的 peer ID（不再基于房间 ID）
-      const peer = createPeer();
-      peerRef.current = peer;
-
-      peer.on('open', async (id) => {
-      console.log('[聊天] 我的 PeerID =', id);
-        
-        if (!mounted) return;
-
-        const { userId: uid, username: uname, avatarSeed: seed } = userInfoRef.current;
-        
-        // 初始化房间信令
-        const signaling = new RoomSignalingManager(
-          peer,
-          roomId,
-          password,
-          uid,
-          uname,
-          seed,
-          (discoveredPeerId: string) => {
-            console.log('Discovered peer through signaling:', discoveredPeerId);
-            connectToPeer(discoveredPeerId);
-          }
-        );
-        
-        signalingRef.current = signaling;
-        
-        try {
-          await signaling.start();
-          console.log('Room signaling started successfully');
-        } catch (error) {
-          console.error('Failed to start room signaling:', error);
-        }
-      });
-
-      peer.on('connection', (conn) => {
-        console.log('[聊天] 收到来自对等方的连接：', conn.peer);
-        setupConnection(conn);
-      });
-
-      // 注意：error 事件已在 createPeer 中统一处理，这里不再重复监听
-    };
-
-    initPeerAndSignaling();
-
-    // 清理函数
-    return () => {
-      mounted = false;
-      
-      if (signalingRef.current) {
-        signalingRef.current.stop();
-        signalingRef.current = null;
-      }
-      
-      connectionsRef.current.forEach((conn) => {
-        conn.close();
-      });
-      connectionsRef.current.clear();
-      
-      if (peerRef.current) {
-        peerRef.current.destroy();
-        peerRef.current = null;
-      }
-    };
-  }, [roomId, password, setupConnection, connectToPeer]);
+    useChatStore.getState().addMessage(message);
+  }, [broadcast]);
 
   return {
-    peer: peerRef.current,
-    connectToPeer,
     sendMessage,
     broadcast,
   };
 };
-
