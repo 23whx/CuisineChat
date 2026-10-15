@@ -4,7 +4,6 @@ import { useChatStore } from '@/store/chatStore';
 import { Avatar } from './Avatar';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { isValidUsername } from '@/utils/username';
-import { getAvatarDataUrl } from '@/utils/avatar';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -38,7 +37,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       ...currentUser,
       username: trimmed,
       avatarSeed: trimmed,
-      avatar: getAvatarDataUrl(trimmed),
     });
     setNewUsername('');
   };

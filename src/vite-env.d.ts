@@ -12,3 +12,5 @@ interface ImportMeta {
   readonly env: ImportMetaEnv
 }
 
+/** 建置日期（YYYY-MM-DD），由 vite.config.ts 注入 */
+declare const __BUILD_DATE__: string;

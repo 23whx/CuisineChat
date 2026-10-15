@@ -4,7 +4,6 @@ import type { DataConnection } from 'peerjs';
 export interface User {
   id: string;
   username: string;
-  avatar: string;
   avatarSeed: string;
   joinedAt: number;
 }

@@ -10,6 +10,7 @@ import { SettingsModal } from '@/components/SettingsModal';
 import { Avatar } from '@/components/Avatar';
 import { ConnectionStatus, Message, MessageType } from '@/types';
 import { fileToBase64 } from '@/utils/fileTransfer';
+import { useNoIndexPage } from '@/seo/usePageMeta';
 
 // 文件整体以 base64 经数据通道发送，并在每个成员的内存中保留，需要限制大小
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
@@ -37,6 +38,9 @@ export const Room: React.FC = () => {
     currentUser?.username || '',
     currentUser?.avatarSeed || ''
   );
+
+  // 聊天室是私人、臨時的頁面，不應被搜尋引擎收錄
+  useNoIndexPage(`${roomId ?? ''} · CuisineChat`);
 
   // 房间超时管理（10分钟无人自动提示）
   const { isEmpty } = useRoomTimeout(10);

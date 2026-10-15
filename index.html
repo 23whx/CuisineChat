@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     
@@ -13,73 +13,36 @@
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- SEO Meta Tags -->
-    <title>CuisineChat - Temporary Chat Room | 临时聊天室</title>
-    <meta name="description" content="A temporary, secure P2P chat room. Share messages, images and files instantly. No registration required. 纯前端临时聊天室，支持文件传输和图片分享。" />
-    <meta name="keywords" content="chat, temporary chat, P2P chat, secure chat, file sharing, 临时聊天, 在线聊天, 文件传输" />
-    <meta name="author" content="CuisineChat Team" />
-    <meta name="robots" content="index,follow" />
-    <link rel="canonical" href="https://cuisinechat.vercel.app/" />
-    <!-- Hreflang (多语言同一 URL 的声明) -->
-    <link rel="alternate" href="https://cuisinechat.vercel.app/" hreflang="x-default" />
-    <link rel="alternate" href="https://cuisinechat.vercel.app/" hreflang="en" />
-    <link rel="alternate" href="https://cuisinechat.vercel.app/" hreflang="zh" />
-    <link rel="alternate" href="https://cuisinechat.vercel.app/" hreflang="ja" />
-    <link rel="alternate" href="https://cuisinechat.vercel.app/" hreflang="ko" />
-    
-    <!-- Open Graph / Facebook / LINE / WhatsApp -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://cuisinechat.vercel.app/" />
-    <meta property="og:title" content="CuisineChat — Private chat rooms that vanish" />
-    <meta property="og:description" content="One room ID + a 3-digit code. Chat peer-to-peer with photos, files and voice — no sign-up, nothing stored." />
-    <!-- 爬蟲不會解析相對路徑，必須使用完整網址；原稿見 scripts/og/ -->
-    <meta property="og:image" content="https://cuisinechat.vercel.app/og-image.jpg" />
-    <meta property="og:image:secure_url" content="https://cuisinechat.vercel.app/og-image.jpg" />
-    <meta property="og:image:type" content="image/jpeg" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="CuisineChat: a glowing lantern beside a chat preview. One room ID plus a 3-digit code; chat, share, then it vanishes." />
-    <meta property="og:site_name" content="CuisineChat" />
-    <meta property="og:locale" content="en_US" />
-    <meta property="og:locale:alternate" content="zh_CN" />
-    <meta property="og:locale:alternate" content="ja_JP" />
-    <meta property="og:locale:alternate" content="ko_KR" />
-
-    <!-- Twitter / X（規範使用 name 而非 property） -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="CuisineChat — Private chat rooms that vanish" />
-    <meta name="twitter:description" content="One room ID + a 3-digit code. Chat peer-to-peer with photos, files and voice — no sign-up, nothing stored." />
-    <meta name="twitter:image" content="https://cuisinechat.vercel.app/og-image.jpg" />
-    <meta name="twitter:image:alt" content="CuisineChat: a glowing lantern beside a chat preview. One room ID plus a 3-digit code; chat, share, then it vanishes." />
+    <!-- SEO：title、description、canonical、hreflang、Open Graph、JSON-LD 由建置期預渲染產生
+         （src/seo/prerender.ts），每種語言各自一份：/、/zh、/ja、/ko -->
+    <!-- seo:head:start --><!-- seo:head:end -->
+    <meta name="author" content="CuisineChat" />
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700;900&display=swap" />
+    <!-- 非阻塞載入：中文字體檔很大，不能卡住首屏渲染（LCP） -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700;900&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700;900&display=swap" media="print" onload="this.media='all'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700;900&display=swap" /></noscript>
+
+    <!-- 預渲染正文的基本樣式（React 掛載前短暫可見） -->
+    <style>
+      html { background: #15110e; color: #f3e7d6; }
+      .prerender { max-width: 42rem; margin: 0 auto; padding: 3rem 1.25rem; font-family: 'Noto Sans TC', system-ui, sans-serif; line-height: 1.7; }
+      .prerender-brand { font-family: 'Noto Serif TC', serif; font-size: 1.6rem; font-weight: 700; letter-spacing: .1em; }
+      .prerender h1 { font-size: 1.5rem; color: #f2a541; }
+      .prerender h2 { font-family: 'Noto Serif TC', serif; font-size: 1.25rem; margin-top: 2rem; }
+      .prerender h3 { font-size: 1rem; margin: 1rem 0 .25rem; }
+      .prerender p, .prerender li { color: #c9b8a3; }
+      .prerender a { color: #f2a541; }
+    </style>
 
     <!-- Theme Color -->
     <meta name="theme-color" content="#15110e" />
     <meta name="color-scheme" content="dark" />
     <meta name="msapplication-TileColor" content="#15110e" />
 
-    <!-- Structured Data (JSON-LD) for WebApplication -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "CuisineChat",
-      "url": "https://cuisinechat.vercel.app/",
-      "applicationCategory": "CommunicationApplication",
-      "operatingSystem": "All",
-      "description": "Temporary, secure P2P chat room with image & file sharing.",
-      "inLanguage": ["en", "zh", "ja", "ko"],
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      }
-    }
-    </script>
     
     <!-- Google AdSense：本站是單頁應用，所有路由（含 /room/*）共用這個 index.html，因此每個頁面都會載入 -->
     <meta name="google-adsense-account" content="ca-pub-4880646654838411" />
@@ -87,7 +50,7 @@
      crossorigin="anonymous"></script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><!-- seo:body:start --><!-- seo:body:end --></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

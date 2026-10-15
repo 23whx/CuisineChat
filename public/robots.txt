@@ -7,7 +7,7 @@ Allow: /
 # 不索引动态房间路径
 Disallow: /room/
 
-Sitemap: https://cuisinechat.vercel.app/sitemap.xml
+Sitemap: https://cuisine-chat.oumashu.top/sitemap.xml
 
 
 

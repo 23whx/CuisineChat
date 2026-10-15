@@ -20,7 +20,8 @@
     "tip3": "Make sure to use the same room ID and password with your friends",
     "noren": "CHAT",
     "tagline": "Tonight's seats are saved for those who know the code",
-    "enter": "Step inside"
+    "enter": "Step inside",
+    "h1": "Free temporary chat room — no sign-up"
   },
   "room": {
     "online": "Online",
@@ -74,5 +75,48 @@
     "peerError": "Peer Connection Error",
     "fileTooLarge": "File Too Large",
     "uploadFailed": "Upload Failed"
+  },
+  "seo": {
+    "title": "Free Temporary Chat Room – No Sign-Up, Private P2P Chat | CuisineChat",
+    "description": "Create a private chat room in seconds: pick a room ID, share a 3-digit code and chat peer-to-peer with photos, files and voice messages. No sign-up, nothing stored.",
+    "keywords": "temporary chat room, anonymous chat room, private chat room, chat room no sign up, online chat room with password, P2P chat, encrypted chat, disposable chat, send files online",
+    "imageAlt": "CuisineChat: a glowing lantern beside a chat preview. One room ID plus a 3-digit code; chat, share, then it vanishes."
+  },
+  "landing": {
+    "whatTitle": "What is CuisineChat?",
+    "what": "CuisineChat is a free, temporary chat room that runs entirely in your web browser. Two or more people open the same room by typing the same room ID and a 3-digit code, then exchange text, photos, files and voice messages directly over peer-to-peer WebRTC connections. There is no sign-up and no server-side message storage: once everyone closes the page, the conversation is gone.",
+    "howTitle": "How it works",
+    "how1Title": "Pick a room ID",
+    "how1": "Type any name, or tap “Create Room” to get a random one.",
+    "how2Title": "Share a 3-digit code",
+    "how2": "Friends who enter the same room ID and code join the same room.",
+    "how3Title": "Chat, then it vanishes",
+    "how3": "Messages travel directly between browsers and disappear when you close the page.",
+    "featuresTitle": "Why CuisineChat",
+    "f1Title": "No sign-up",
+    "f1": "No account, email or phone number. You get a random food nickname like Ramen or Tiramisu.",
+    "f2Title": "Peer-to-peer",
+    "f2": "Messages, photos and files go straight between devices over encrypted WebRTC connections.",
+    "f3Title": "Nothing stored",
+    "f3": "There is no database. Chat history lives only in your browser tab.",
+    "f4Title": "Photos, files & voice",
+    "f4": "Share images, files up to 20 MB and voice messages in the same room.",
+    "f5Title": "Works everywhere",
+    "f5": "Runs in any modern browser on phone or desktop — nothing to install.",
+    "f6Title": "4 languages",
+    "f6": "Available in English, 中文, 日本語 and 한국어.",
+    "faqTitle": "Frequently asked questions",
+    "q1": "Is CuisineChat really free?",
+    "a1": "Yes. There is no sign-up and no paid plan.",
+    "q2": "Are my messages saved anywhere?",
+    "a2": "No. Messages are sent directly between participants and are gone once everyone closes the page.",
+    "q3": "Is the chat encrypted?",
+    "a3": "Data travels over WebRTC, which encrypts every connection (DTLS). A public signaling server only helps browsers find each other and never sees your messages.",
+    "q4": "How many people can join a room?",
+    "a4": "Small groups work best, because every participant connects directly to everyone else.",
+    "q5": "Why can’t my friend connect?",
+    "a5": "Make sure you both use exactly the same room ID and 3-digit code. Strict company or school networks can block peer-to-peer connections.",
+    "languages": "Languages",
+    "updated": "Last updated"
   }
 }
