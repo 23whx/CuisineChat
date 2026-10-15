@@ -19,6 +19,8 @@ interface ChatState {
   setCurrentUser: (user: User) => void;
   setRoom: (roomId: string, password: string) => void;
   addMessage: (message: Message) => void;
+  /** 合并一批消息（如本机保存的历史记录），去重后按时间排序 */
+  mergeMessages: (messages: Message[]) => void;
   clearMessages: () => void;
   upsertPeer: (peerId: string, user: PeerUser) => void;
   removePeer: (peerId: string) => void;
@@ -44,6 +46,14 @@ export const useChatStore = create<ChatState>((set) => ({
       // 重复连接或重传时可能收到同一条消息
       if (state.messages.some((m) => m.id === message.id)) return state;
       return { messages: [...state.messages, message] };
+    }),
+
+  mergeMessages: (incoming) =>
+    set((state) => {
+      const seen = new Set(state.messages.map((m) => m.id));
+      const fresh = incoming.filter((m) => !seen.has(m.id));
+      if (fresh.length === 0) return state;
+      return { messages: [...state.messages, ...fresh].sort((a, b) => a.timestamp - b.timestamp) };
     }),
 
   clearMessages: () => set({ messages: [] }),

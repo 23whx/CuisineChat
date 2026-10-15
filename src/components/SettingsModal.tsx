@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useChatStore } from '@/store/chatStore';
 import { Avatar } from './Avatar';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { HistorySettings } from './HistorySettings';
 import { isValidUsername } from '@/utils/username';
 
 interface SettingsModalProps {
@@ -47,7 +48,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-title"
-        className="modal-panel max-w-md p-6"
+        className="modal-panel max-w-md p-6 max-h-[90dvh] overflow-y-auto custom-scrollbar"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
@@ -99,6 +100,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               </button>
             </div>
           </form>
+
+          <HistorySettings />
 
           {/* 語言 */}
           <div>

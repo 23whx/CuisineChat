@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useChatStore } from '@/store/chatStore';
 import { usePeerConnection } from '@/hooks/usePeerConnection';
 import { useRoomTimeout } from '@/hooks/useRoomTimeout';
+import { useChatHistory } from '@/hooks/useChatHistory';
+import { useUIStore } from '@/store/uiStore';
 import { MessageBubble } from '@/components/MessageBubble';
 import { MessageInput } from '@/components/MessageInput';
 import { SettingsModal } from '@/components/SettingsModal';
@@ -38,6 +40,11 @@ export const Room: React.FC = () => {
     currentUser?.username || '',
     currentUser?.avatarSeed || ''
   );
+
+  // 本機聊天記錄（用戶可在設定中選擇保留 1–27 小時）
+  useChatHistory(roomId || '', roomPassword || '');
+  const historyEnabled = useUIStore((s) => s.historyEnabled);
+  const historyHours = useUIStore((s) => s.historyHours);
 
   // 聊天室是私人、臨時的頁面，不應被搜尋引擎收錄
   useNoIndexPage(`${roomId ?? ''} · CuisineChat`);
@@ -179,6 +186,16 @@ export const Room: React.FC = () => {
             {t('room.online')}: {onlinePeers.length + 1} {t('room.people')}
           </div>
         </div>
+
+        {historyEnabled && (
+          <button
+            onClick={() => setShowSettings(true)}
+            className="text-[11px] text-lantern border border-lantern/40 bg-lantern/10 rounded px-1.5 py-0.5 whitespace-nowrap hover:bg-lantern/20 transition-colors"
+            title={t('settings.history')}
+          >
+            {t('room.historyBadge', { count: historyHours })}
+          </button>
+        )}
 
         <span className="hidden sm:inline-block font-serif text-[11px] text-noren border border-noren rounded px-1.5 py-0.5">
           {t('room.open')}
